@@ -581,16 +581,9 @@ void segfault_handler(__unused int signum, siginfo_t *info, __unused void *conte
 		break;
 	}
 	rc_set_state(EXITING);
-	/*
-	// unregister signal handler
-	struct sigaction action;
-	action.sa_sigaction = NULL;
-	sigemptyset(&action.sa_mask);
-	action.sa_flags = SA_SIGINFO;
-	action.sa_restorer = NULL;
-	
-	sigaction(SIGSEGV, &action, NULL);
-	*/
+
+	// here we would normally reset the signal handler to prevent infinite
+	// loop, but this happens automatically with the SA_RESETHAND flag
 	return;
 }
 
@@ -619,9 +612,10 @@ void rc_enable_signal_handler(){
 
 	// different handler for segfaults
 	// here we want SIGINFO too so we use sigaction intead of handler
+	// also use RESETHAND to stop infinite loops
 	action.sa_handler = NULL;
 	action.sa_sigaction = segfault_handler;
-	action.sa_flags = SA_SIGINFO;
+	action.sa_flags = SA_SIGINFO | SA_RESETHAND;
 	if(sigaction(SIGSEGV, &action, NULL) < 0){
 		fprintf(stderr, "ERROR: failed to set sigaction\n");
 	}
