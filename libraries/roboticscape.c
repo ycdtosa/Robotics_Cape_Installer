@@ -10,6 +10,7 @@
 #include <stdlib.h> // for system()
 #include "roboticscape.h"
 #include "rc_defs.h"
+#include "preprocessor_macros.h"
 #include "gpio/rc_gpio_setup.h"
 #include "mmap/rc_mmap_gpio_adc.h"	// used for fast gpio functions
 #include "mmap/rc_mmap_pwmss.h"		// used for fast pwm functions
@@ -28,12 +29,13 @@ enum rc_state_t rc_state = UNINITIALIZED;
 
 
 
+
 /*******************************************************************************
 * local function declarations
 *******************************************************************************/
 int is_cape_loaded();
-void shutdown_signal_handler(int signo);
-
+void shutdown_signal_handler(int signum);
+void segfault_handler(int signum, siginfo_t *info, void *context);
 
 /*******************************************************************************
 * int rc_initialize()
@@ -451,13 +453,13 @@ int rc_disable_servo_power_rail(){
 }
 
 /*******************************************************************************
-* shutdown_signal_handler(int signo)
+* void shutdown_signal_handler(int signum)
 *
 * catch Ctrl-C signal and change system state to EXITING
 * all threads should watch for rc_get_state()==EXITING and shut down cleanly
 *******************************************************************************/
-void shutdown_signal_handler(int signo){
-	switch(signo){
+void shutdown_signal_handler(int signum){
+	switch(signum){
 	case SIGINT: // normal ctrl-c shutdown interrupt
 		rc_set_state(EXITING);
 		printf("\nreceived SIGINT Ctrl-C\n");
@@ -547,9 +549,48 @@ int rc_kill(){
 * cleanly.
 *******************************************************************************/
 void rc_disable_signal_handler(){
-	signal(SIGINT, SIG_DFL);
-	signal(SIGKILL, SIG_DFL);
-	signal(SIGHUP, SIG_DFL);
+	struct sigaction action;
+	action.sa_handler = SIG_DFL;
+
+	// reset all to defaults
+	sigaction(SIGINT, &action, NULL); 
+	sigaction(SIGTERM, &action, NULL); 
+	sigaction(SIGHUP, &action, NULL); 
+	sigaction(SIGSEGV, &action, NULL); 
+	return;
+}
+
+/*******************************************************************************
+* @ void segfault_handler(int signum, siginfo_t *info, void *context)
+*
+* custom segfault catcher to show useful info
+*******************************************************************************/
+void segfault_handler(__unused int signum, siginfo_t *info, __unused void *context)
+{
+	fprintf(stderr, "ERROR: Segmentation Fault\n");
+	fprintf(stderr, "Fault address: %p\n", info->si_addr);
+	switch (info->si_code){
+	case SEGV_MAPERR:
+		fprintf(stderr, "Address not mapped.\n");
+		break;
+	case SEGV_ACCERR:
+		fprintf(stderr, "Access to this address is not allowed.\n");
+		break;
+	default:
+		fprintf(stderr, "Unknown reason.\n");
+		break;
+	}
+	rc_set_state(EXITING);
+	/*
+	// unregister signal handler
+	struct sigaction action;
+	action.sa_sigaction = NULL;
+	sigemptyset(&action.sa_mask);
+	action.sa_flags = SA_SIGINFO;
+	action.sa_restorer = NULL;
+	
+	sigaction(SIGSEGV, &action, NULL);
+	*/
 	return;
 }
 
@@ -560,9 +601,31 @@ void rc_disable_signal_handler(){
 * signal handler is enabled in rc_initialize()
 *******************************************************************************/
 void rc_enable_signal_handler(){
-	signal(SIGINT, shutdown_signal_handler);
-	signal(SIGTERM, shutdown_signal_handler);
-	signal(SIGHUP, shutdown_signal_handler);
+	// make the sigaction struct for shutdown signals
+	struct sigaction action;
+	action.sa_sigaction = NULL;
+	action.sa_handler = shutdown_signal_handler;
+
+	// set actions
+	if(sigaction(SIGINT, &action, NULL) < 0){
+		fprintf(stderr, "ERROR: failed to set sigaction\n");
+	}
+	if(sigaction(SIGTERM, &action, NULL) < 0){
+		fprintf(stderr, "ERROR: failed to set sigaction\n");
+	}
+	if(sigaction(SIGHUP, &action, NULL) < 0){
+		fprintf(stderr, "ERROR: failed to set sigaction\n");
+	}
+
+	// different handler for segfaults
+	// here we want SIGINFO too so we use sigaction intead of handler
+	action.sa_handler = NULL;
+	action.sa_sigaction = segfault_handler;
+	action.sa_flags = SA_SIGINFO;
+	if(sigaction(SIGSEGV, &action, NULL) < 0){
+		fprintf(stderr, "ERROR: failed to set sigaction\n");
+	}
+
 	return;
 }
 
