@@ -48,18 +48,6 @@ pthread_t mode_released_thread;
 *******************************************************************************/
 int initialize_button_handlers(){
 
-	// #ifdef DEBUG
-	// printf("setting pause_pressed function\n"); 
-	// #endif
-	// rc_set_pause_pressed_func(&rc_null_func);
-
-	// #ifdef DEBUG
-	// printf("setting remaining button functions\n");
-	// #endif
-	//rc_set_pause_released_func(&rc_null_func);
-	//rc_set_mode_pressed_func(&rc_null_func);
-	//rc_set_mode_released_func(&rc_null_func);
-	
 	#ifdef DEBUG
 	printf("starting button threads\n");
 	#endif

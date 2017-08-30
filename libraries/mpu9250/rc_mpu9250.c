@@ -67,6 +67,7 @@ int last_read_successful;
 uint64_t last_interrupt_timestamp_nanos;
 rc_imu_data_t* data_ptr;
 int shutdown_interrupt_thread = 0;
+int is_imu_on = 0;
 // for magnetometer Yaw filtering
 rc_filter_t low_pass, high_pass;
 
@@ -237,6 +238,7 @@ int rc_initialize_imu(rc_imu_data_t *data, rc_imu_config_t conf){
 	
 	// all done!!
 	rc_i2c_release_bus(IMU_BUS);
+	is_imu_on = 1;
 	return 0;
 }
 
@@ -639,6 +641,10 @@ int power_down_magnetometer(){
 *	Power down the IMU
 *******************************************************************************/
 int rc_power_off_imu(){
+	if(!is_imu_on){
+		fprintf(stderr, "ERROR: trying to power off IMU when it's not running\n");
+		return -1;
+	}
 	shutdown_interrupt_thread = 1;
 	// set the device address
 	rc_i2c_set_device_address(IMU_BUS, IMU_ADDR);
@@ -847,6 +853,7 @@ int rc_initialize_imu_dmp(rc_imu_data_t *data, rc_imu_config_t conf){
 	pthread_getschedparam(imu_interrupt_thread, &policy, &params_tmp);
 	printf("new policy: %d, fifo: %d, prio: %d\n", policy, SCHED_FIFO, params_tmp.sched_priority);
 	#endif
+	is_imu_on = 1;
 	return 0;
 }
 
