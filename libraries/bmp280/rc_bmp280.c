@@ -40,6 +40,7 @@ typedef struct bmp280_data_t{
 // one global instance of each struct
 bmp280_cal_t cal;
 bmp280_data_t data;
+int is_bmp_on=0;
 
 
 /*******************************************************************************
@@ -174,6 +175,7 @@ int rc_initialize_barometer(rc_bmp_oversample_t oversample, rc_bmp_filter_t filt
 		rc_i2c_release_bus(BMP_BUS);
 		return -1;
 	}
+	is_bmp_on=1;
 	return 0;
 }
 
@@ -184,6 +186,10 @@ int rc_initialize_barometer(rc_bmp_oversample_t oversample, rc_bmp_filter_t filt
 * Puts the barometer into low power standby
 *******************************************************************************/
 int rc_power_off_barometer(){
+	if(!is_bmp_on){
+		fprintf(stderr,"WARNING: trying to power off barometer when it's not on\n");
+		return -1;
+	}
 	// make sure the bus is not currently in use by another thread
 	// do not proceed to prevent interfering with that process
 	if(rc_i2c_get_in_use_state(BMP_BUS)){
@@ -206,6 +212,7 @@ int rc_power_off_barometer(){
 	
 	// release control of the bus
 	rc_i2c_release_bus(BMP_BUS);
+	is_bmp_on=0;
 	return 0;
 }
 

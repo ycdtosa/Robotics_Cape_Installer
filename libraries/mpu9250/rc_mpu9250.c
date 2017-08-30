@@ -642,7 +642,7 @@ int power_down_magnetometer(){
 *******************************************************************************/
 int rc_power_off_imu(){
 	if(!is_imu_on){
-		fprintf(stderr, "ERROR: trying to power off IMU when it's not running\n");
+		fprintf(stderr, "WARNING: trying to power off IMU when it's not running\n");
 		return -1;
 	}
 	shutdown_interrupt_thread = 1;
@@ -679,6 +679,7 @@ int rc_power_off_imu(){
 			fprintf(stderr,"WARNING: imu_interrupt_thread exit timeout\n");
 		}
 	}
+	is_imu_on=0;
 	return 0;
 }
 
