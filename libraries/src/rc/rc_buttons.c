@@ -4,9 +4,6 @@
 * 4 threads for managing the pause and press buttons
 *******************************************************************************/
 #define _GNU_SOURCE
-//#include "../roboticscape.h"
-//#include "../rc_defs.h"
-
 #include <pthread.h>
 #include <errno.h>
 #include <stdio.h>
@@ -16,7 +13,6 @@
 
 #include <rc/gpio/buttons.h>
 #include <rc/gpio/gpio.h>
-
 #include <rc/other/preprocessor_macros.h>
 
 

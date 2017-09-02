@@ -1,5 +1,5 @@
 /*******************************************************************************
-* mpu9250.c
+* rc_mpu9250.c
 *
 * This is a collection of high-level functions to control the
 * MPU9250 from a BeagleBone Black as configured on the Robotics Cape.
@@ -9,7 +9,7 @@
 #include "../rc_defs.h"
 #include "../roboticscape.h"
 #include "../preprocessor_macros.h"
-#include "rc_mpu9250_defs.h"
+#include "mpu9250_defs.h"
 #include "dmp_firmware.h"
 #include "dmpKey.h"
 #include <stdio.h>
