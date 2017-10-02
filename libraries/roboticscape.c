@@ -594,6 +594,8 @@ void segfault_handler(__unused int signum, siginfo_t *info, __unused void *conte
 * signal handler is enabled in rc_initialize()
 *******************************************************************************/
 void rc_enable_signal_handler(){
+	return;
+
 	// make the sigaction struct for shutdown signals
 	struct sigaction action;
 	action.sa_sigaction = NULL;

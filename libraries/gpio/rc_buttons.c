@@ -17,10 +17,10 @@
 #define POLL_BUF_LEN 1024
 
 // function pointers for button handlers
-void (*pause_pressed_func)(void)	= &rc_null_func;
-void (*pause_released_func)(void)	= &rc_null_func;
-void (*mode_pressed_func)(void)		= &rc_null_func;
-void (*mode_released_func)(void)	= &rc_null_func;
+static void (*pause_pressed_func)(void)	= &rc_null_func;
+static void (*pause_released_func)(void)	= &rc_null_func;
+static void (*mode_pressed_func)(void)		= &rc_null_func;
+static void (*mode_released_func)(void)	= &rc_null_func;
 
 
 /*******************************************************************************
