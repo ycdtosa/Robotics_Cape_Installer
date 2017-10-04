@@ -1,12 +1,12 @@
 /*******************************************************************************
 * roboticscape.h
 *
-* This contains the complete Robotics Cape API. All functions declared here can 
+* This contains the complete Robotics Cape API. All functions declared here can
 * be executed by linking to /usr/lib/robotics_cape.so
 *
 * All functions return 0 on success or -1 on failure unless otherwise stated.
 *
-* James Strawson - 2016
+* James Strawson - 2017
 *******************************************************************************/
 
 #ifndef ROBOTICS_CAPE
@@ -14,8 +14,8 @@
 
 // library version, can also be printed from the command line with the included
 // example program rc_version
-#define RC_LIB_VERSION_FLOAT	0.34
-#define RC_LIB_VERSION_STRING	0.3.4
+#define RC_LIB_VERSION_FLOAT	0.40
+#define RC_LIB_VERSION_STRING	0.4.0
 
 // necessary types for function prototypes
 #include <stdint.h> // for uint8_t types etc
@@ -25,13 +25,13 @@ typedef struct timeval timeval;
 /*******************************************************************************
 * INITIALIZATION AND CLEANUP
 *
-* Because the Robotics Cape library is tightly integrated with hardware and 
-* utilizes background threads, it is critical that the user calls 
+* Because the Robotics Cape library is tightly integrated with hardware and
+* utilizes background threads, it is critical that the user calls
 * rc_initialize() and rc_cleanup() at the beginning and end of their programs to
-* ensure predictable operation. These methods, also enable the following two 
+* ensure predictable operation. These methods, also enable the following two
 * features.
 *
-* Firstly, to ensure only one program interfaces with the Robotics Cape core 
+* Firstly, to ensure only one program interfaces with the Robotics Cape core
 * functions at once, it  makes a PID file in /var/run/ called robotics.pid that
 * contains the process ID of the currently running robotics cape project. If a
 * second process is started that uses the Robotics Cape library, the call to
@@ -40,7 +40,7 @@ typedef struct timeval timeval;
 * projects that are started on boot as a service. See the services section of
 * the manual for more details on systemd services.
 *
-* Secondly, the call to rc_initialize() registers a system signal handler to 
+* Secondly, the call to rc_initialize() registers a system signal handler to
 * intercept shutdown and halt signals. It is typical to stop a Linux program by
 * pressing Ctrl-C but this can halt the program in a problematic state if not
 * handled correctly. When the user presses Ctrl-C, the Linux kernel sends the
@@ -53,7 +53,7 @@ typedef struct timeval timeval;
 * caught and ignored so that robotics programs started from the command line
 * over a USB connection will continue to run if the USB cable is disconnected.
 
-* @ int rc_initialize() 
+* @ int rc_initialize()
 *
 * To ensure full library functionality and to take advantage of the above
 * features, the user must call rc_initialize() at beginning of their program.
@@ -64,16 +64,16 @@ typedef struct timeval timeval;
 * Robotics Cape device tree is not loaded then this function will return -1 and
 * print an error message to indicate what is wrong. Otherwise it will return 0
 * to indicate success.
-* 
-* @ int rc_cleanup() 
+*
+* @ int rc_cleanup()
 *
 * rc_cleanup() undoes everything done by initialize cape. It closes file
 * pointers, waits for background threads to stop cleanly, and finally removes
 * the PID file from /var/run/. Additionally it sets LEDs and slave select pins
 * in an 'OFF' state and puts the h-bridges into a low power standby state. This
 * should be called at the very end of the user's program. It returns 0 on
-* success or -1 on error. 
-* 
+* success or -1 on error.
+*
 * * @ int rc_kill()
 *
 * This function is used by initialize_cape to make sure any existing program
@@ -87,7 +87,7 @@ typedef struct timeval timeval;
 *  0 : No existing program is running
 *  1 : An existing program was running but it shut down cleanly.
 *
-* All example programs use these functions. See the bare_minimum example 
+* All example programs use these functions. See the bare_minimum example
 * for a skeleton outline.
 *
 * @ void rc_disable_signal_handler()
@@ -99,7 +99,7 @@ typedef struct timeval timeval;
 *
 * @ void rc_enable_signal_handler()
 *
-* Re-enables the built-in signal handler if it was disabled before. The built-in 
+* Re-enables the built-in signal handler if it was disabled before. The built-in
 * signal handler is enabled by default in rc_initialize().
 *******************************************************************************/
 int rc_initialize();	// call at the beginning of main()
@@ -118,31 +118,31 @@ void rc_enable_signal_handler();
 * high-level program flow control method described here.
 *
 * The rc_state_t struct tries to cover the majority of use cases in the context
-* of a robotics application. After the user has called rc_initialize(), the 
-* program flow state will be set to UNINITIALIZED. When the user's own 
-* initialization sequence is complete they should set the flow state to PAUSED 
+* of a robotics application. After the user has called rc_initialize(), the
+* program flow state will be set to UNINITIALIZED. When the user's own
+* initialization sequence is complete they should set the flow state to PAUSED
 * or RUNNING to indicate to their own threads that the program should now behave
 * in normal ongoing operational mode.
 *
-* During normal operation, the user may elect to implement a PAUSED state where 
-* the user's own threads may keep running to read sensors but do not actuate 
-* motors, leaving their robot in a safe state. For example, pressing the pause 
-* button could be assigned to change this state back and forth between RUNNING 
+* During normal operation, the user may elect to implement a PAUSED state where
+* the user's own threads may keep running to read sensors but do not actuate
+* motors, leaving their robot in a safe state. For example, pressing the pause
+* button could be assigned to change this state back and forth between RUNNING
 * and PAUSED. This is entirely optional.
 *
-* The most important state here is EXITING. The signal handler described in the 
-* Init & Cleanup section intercepts the SIGINT signal when the user pressed 
+* The most important state here is EXITING. The signal handler described in the
+* Init & Cleanup section intercepts the SIGINT signal when the user pressed
 * Ctrl-C and sets the flow state to EXITING. It is then up to the user's threads
-* to watch for this condition and exit quickly and cleanly. The user may also 
-* set the flow state to EXITING at any time to trigger the closing of their own 
+* to watch for this condition and exit quickly and cleanly. The user may also
+* set the flow state to EXITING at any time to trigger the closing of their own
 * threads and Robotics Cape library's own background threads.
 *
-* The flow state variable is kept safely in the robotics cape library's memory 
+* The flow state variable is kept safely in the robotics cape library's memory
 * space and should be read and modified by the rc_get_state() and rc_set_state()
-* functions above. The user may optionally use the rc_print_state() function to 
+* functions above. The user may optionally use the rc_print_state() function to
 * print a human readable version of the state enum to the screen.
 
-* All example programs use these functions. See the rc_bare_minimum example 
+* All example programs use these functions. See the rc_bare_minimum example
 * for a skeleton outline.
 *******************************************************************************/
 typedef enum rc_state_t {
@@ -164,19 +164,19 @@ int rc_print_state();
 * the Robotics Cape provides two LEDs for sole use by the user. One is red
 * and one is green. The included examples use the red LED to indicate a paused
 * or stopped state, and the green LED to indicate a running state. However
-* they are not tied to any other robotics cape library functions and can be 
+* they are not tied to any other robotics cape library functions and can be
 * used for whatever the user desires.
 *
 * @ typedef enum rc_led_t
-* 
+*
 * Two LEDs are available and defined by an enumerated type led_t which can be
 * RED or GREEN. Just like most boolean states in the C language, a 0 indicates
-* 'false' or 'off' and anything else indicates 'on' or 'true'. To make code 
+* 'false' or 'off' and anything else indicates 'on' or 'true'. To make code
 * easier to read, #defines are provided for 'ON' and 'OFF'.
 *
 * @ int rc_set_led(rc_led_t led, int state)
-* 
-* If state is 0 the LED will be turned off. If int state is non-zero then the 
+*
+* If state is 0 the LED will be turned off. If int state is non-zero then the
 * LED will be turned on. Returns 0 on success, -1 on failure.
 *
 * @ int rc_get_led_state(rc_led_t led)
@@ -186,7 +186,7 @@ int rc_print_state();
 * threads may wish to use the same LED.
 *
 * @ int rc_blink_led(rc_led_t led, float hz, float period)
-* 
+*
 * Flash an LED at a set frequency for a finite period of time.
 * This is a blocking call and only returns after flashing.
 *
@@ -217,7 +217,7 @@ int rc_blink_led(rc_led_t led, float hz, float period);
 * using the previously described rc_set_state() function.
 *
 * @ typedef enum rc_button_state_t
-* 
+*
 * A button state can be either RELEASED or PRESSED as defined by this enum.
 *
 * @ int rc_set_pause_pressed_func(int (*func)(void))
@@ -226,18 +226,18 @@ int rc_blink_led(rc_led_t led, float hz, float period);
 * @ int rc_set_mode_released_func(int (*func)(void))
 *
 * rc_initialize() sets up interrupt handlers that run in the background to
-* poll changes in button state in a way that uses minimal resources. The 
+* poll changes in button state in a way that uses minimal resources. The
 * user can assign which function should be called when either button is pressed
 * or released. Functions can also be assigned under both conditions.
 * for example, a timer could be started when a button is pressed and stopped
 * when the button is released. Pass
 *
 * For simple tasks like pausing the robot, the user is encouraged to assign
-* their function to be called when the button is released as this provides 
+* their function to be called when the button is released as this provides
 * a more natural user experience aligning with consumer product functionality.
-* 
+*
 * The user can also just do a basic call to rc_get_pause_button_state() or
-* rc_get_mode_buttom_state() which returns the enumerated type RELEASED or 
+* rc_get_mode_buttom_state() which returns the enumerated type RELEASED or
 * PRESSED.
 *
 * See the rc_blink and rc_test_buttons example programs for sample use cases.
@@ -261,16 +261,16 @@ rc_button_state_t rc_get_mode_button();
 * 2-cell lithium battery pack connected to the cape. The motors will not draw
 * power from USB or the 9-18v DC Jack. Each channel can support 1.2A continuous
 * and the user must be careful to choose motors which will not exceed this
-* rating when stalled. Each channel is broken out on an independent 2-pin 
+* rating when stalled. Each channel is broken out on an independent 2-pin
 * JST ZH connector.
-* 
+*
 * @ int rc_enable_motors()
 * @ int rc_disable_motors()
 *
 * The motor drivers are initially in a low-power standby state and must be
-* woken up with rc_enable_motors() before use. The user can optionally put the 
+* woken up with rc_enable_motors() before use. The user can optionally put the
 * motor drivers back into low power state with rc_disable_motors().
-* 
+*
 * @ int rc_set_motor(int motor, float duty)
 * @ int rc_set_motor_all(float duty)
 *
@@ -281,7 +281,7 @@ rc_button_state_t rc_get_mode_button();
 * @ int rc_set_motor_free_spin(int motor)
 * @ int set motor_free_spin_all()
 *
-* This puts one or all motor outputs in high-impedance state which lets the 
+* This puts one or all motor outputs in high-impedance state which lets the
 * motor spin freely as if it wasn't connected to anything.
 *
 * @ int rc_set_motor_brake(int motor)
@@ -318,7 +318,7 @@ int rc_set_motor_brake_all();
 * The first 3 channels are counted by the Sitara's eQEP hardware encoder
 * counters. The 4th channel is counted by the PRU. As a result, no CPU cycles
 * are wasted counting encoders and the user only needs to read the channel
-* at any point in their code to get the current position. All channels are 
+* at any point in their code to get the current position. All channels are
 * reset to 0 when initialize_cape() is called. However, the user can reset
 * the counter to zero or any other signed 32 bit value with rc_set_encoder_pos().
 *
@@ -337,10 +337,10 @@ int rc_set_encoder_pos(int ch, int value);
 * 2-cell lithium battery voltage and the voltage of any power source connected
 * to the 6-16V DC power jack. These can be read with rc_battery_voltage()
 * and rc_dc_jack_voltage()
-* 
+*
 * @ int rc_adc_raw(int ch)
 * @ float rc_adc_volt(int ch)
-* 
+*
 * There is also a 6-pin JST-SH socket on the Cape for connecting up to 4
 * potentiometers or general use analog signals. The pinout of this socket is
 * as follows:
@@ -353,8 +353,8 @@ int rc_set_encoder_pos(int ch, int value);
 * 6 - AIN3
 *
 * All 7 ADC channels on the Sitara including the 4 listed above can be read
-* with rc_adc_raw(int ch) which returns the raw integer output of the 
-* 12-bit ADC. rc_adc_volt(int ch) additionally converts this raw value to 
+* with rc_adc_raw(int ch) which returns the raw integer output of the
+* 12-bit ADC. rc_adc_volt(int ch) additionally converts this raw value to
 * a voltage. ch must be from 0 to 6.
 *
 * See the test_adc example for sample use case.
@@ -366,7 +366,7 @@ float rc_adc_volt(int ch);
 
 
 /******************************************************************************
-* SERVO AND ESC 
+* SERVO AND ESC
 *
 * The Robotics Cape has 8 3-pin headers for connecting hobby servos and ESCs.
 * The connectors are not polarized so pay close attention to the symbols
@@ -380,8 +380,8 @@ float rc_adc_volt(int ch);
 * @ int rc_enable_servo_power_rail()
 * @ int rc_disable_servo_power_rail()
 *
-* The user must call rc_enable_servo_power_rail() to enable the 6V voltage 
-* regulator and send power to servos. This can be ignored if using ESCs or 
+* The user must call rc_enable_servo_power_rail() to enable the 6V voltage
+* regulator and send power to servos. This can be ignored if using ESCs or
 * servos that are driven by an external power source.
 * rc_disable_servo_power_rail() can be called to turn off power to the servos for
 * example when the robot is in a paused state to save power or prevent noisy
@@ -390,13 +390,13 @@ float rc_adc_volt(int ch);
 * @ int rc_send_servo_pulse_normalized(int ch, float input)
 * @ int rc_send_servo_pulse_normalized_all(float input)
 *
-* The normal operating range of hobby servos is usually +- 60 degrees of 
+* The normal operating range of hobby servos is usually +- 60 degrees of
 * rotation from the neutral position but they often work up to +- 90 degrees.
 * rc_send_servo_pulse_normalized(int ch, float input) will send a single pulse to
 * the selected channel. the normalized input should be between -1.5 and 1.5
 * corresponding to the following pulse width range and angle.
 *
-* input     width   angle  
+* input     width   angle
 * -1.5		600us	90 deg anticlockwise
 * -1.0		900us	60 deg anticlockwise
 *  0.0		1500us	0 deg neutral
@@ -414,7 +414,7 @@ float rc_adc_volt(int ch);
 * rc_send_esc_pulse_normalized(int ch, float input) also sends a single pulse
 * but the range is set for common ESCs
 *
-* input     width   power  
+* input     width   power
 * -0.1		900     armed but idle
 * 0.0		1000us	0%   off
 * 0.5		1500us	50%  half-throttle
@@ -429,7 +429,7 @@ float rc_adc_volt(int ch);
 * The user may also elect to manually specify the exact pulse width in
 * in microseconds with rc_send_servo_pulse_us(int ch, int us). When using any of
 * these functions, be aware that they only send a single pulse to the servo
-* or ESC. Servos and ESCs typically require an update frequency of at least 
+* or ESC. Servos and ESCs typically require an update frequency of at least
 * 10hz to prevent timing out. The timing accuracy of this loop is not critical
 * and the user can choose to update at whatever frequency they wish.
 *
@@ -457,28 +457,28 @@ int rc_send_oneshot_pulse_normalized_all(float input);
 * Starts the background service.
 *
 * @ rc_is_new_dsm_data()
-* 
-* Returns 1 when new data is available. 
+*
+* Returns 1 when new data is available.
 *
 * @ int rc_is_dsm_active()
-* 
+*
 * Returns 1 if packets are arriving in good health without timeouts.
 * Returns 0 otherwise.
 *
 * @ int rc_set_dsm_data_func(int (*func)(void));
 *
 * Much like the button handlers, this assigns a user function to be called when
-* new data arrives. Be careful as you should still check for radio disconnects 
+* new data arrives. Be careful as you should still check for radio disconnects
 *
-* @ int rc_get_dsm_ch_raw(int channel) 
-* 
+* @ int rc_get_dsm_ch_raw(int channel)
+*
 * Returns the pulse width in microseconds commanded by the transmitter for a
-* particular channel. The user can specify channels 1 through 9 but non-zero 
-* values will only be returned for channels the transmitter is actually using. 
+* particular channel. The user can specify channels 1 through 9 but non-zero
+* values will only be returned for channels the transmitter is actually using.
 * The raw values in microseconds typically range from 900-2100us for a standard
 * radio with default settings.
 *
-* @ rc_get_dsm_ch_normalized(int channel) 
+* @ rc_get_dsm_ch_normalized(int channel)
 *
 * Returns a scaled value from -1 to 1 corresponding to the min and max values
 * recorded during calibration. The user
@@ -486,7 +486,7 @@ int rc_send_oneshot_pulse_normalized_all(float input);
 * by this function are correct.
 *
 * @ uint64_t rc_nanos_since_last_dsm_packet();
-* 
+*
 * returns the number of nanoseconds since the last dsm packet was received.
 * if no packet has ever been received, returns UINT64_MAX;
 *
@@ -502,7 +502,7 @@ int rc_send_oneshot_pulse_normalized_all(float input);
 *
 * int rc_calibrate_dsm_routine()
 *
-* Starts a calibration routine. 
+* Starts a calibration routine.
 *
 * see rc_test_dsm, rc_calibrate_dsm, and rc_dsm_passthroguh examples
 ******************************************************************************/
@@ -541,32 +541,32 @@ int   rc_calibrate_dsm_routine();
 * choosing set with the rc_set_imu_interrupt_func() function.
 *
 * @ enum rc_accel_fsr_t rc_gyro_fsr_t
-* 
+*
 * The user may choose from 4 full scale ranges of the accelerometer and
 * gyroscope. They have units of gravity (G) and degrees per second (DPS)
 * The defaults values are A_FSR_4G and G_FSR_1000DPS respectively.
 *
-* enum rc_accel_dlpf_t rc_gyro_dlpf_t 
+* enum rc_accel_dlpf_t rc_gyro_dlpf_t
 *
-* The user may choose from 7 digital low pass filter constants for the 
+* The user may choose from 7 digital low pass filter constants for the
 * accelerometer and gyroscope. The filter runs at 1kz and helps to reduce sensor
 * noise when sampling more slowly. The default values are ACCEL_DLPF_184
 * GYRO_DLPF_250. Lower cut-off frequencies incur phase-loss in measurements.
 *
 * @ struct rc_imu_config_t
 *
-* Configuration struct passed to rc_initialize_imu and rc_initialize_imu_dmp. It is 
+* Configuration struct passed to rc_initialize_imu and rc_initialize_imu_dmp. It is
 * best to get the default config with rc_default_imu_config() function and
 * modify from there.
 *
-* @ struct rc_imu_data_t 
+* @ struct rc_imu_data_t
 *
 * This is the container for holding the sensor data from the IMU.
 * The user is intended to make their own instance of this struct and pass
 * its pointer to imu read functions.
 *
 * @ rc_imu_config_t rc_default_imu_config()
-* 
+*
 * Returns an rc_imu_config_t struct with default settings. Use this as a starting
 * point and modify as you wish.
 *
@@ -608,7 +608,7 @@ typedef enum rc_gyro_fsr_t{
   G_FSR_250DPS,
   G_FSR_500DPS,
   G_FSR_1000DPS,
-  G_FSR_2000DPS 
+  G_FSR_2000DPS
 } rc_gyro_fsr_t;
 
 typedef enum rc_accel_dlpf_t{
@@ -646,14 +646,14 @@ typedef struct rc_imu_config_t{
 	// full scale ranges for sensors
 	rc_accel_fsr_t accel_fsr; // AFS_2G, AFS_4G, AFS_8G, AFS_16G
 	rc_gyro_fsr_t gyro_fsr;  // GFS_250,GFS_500,GFS_1000,GFS_2000
-	
+
 	// internal low pass filter constants
 	rc_gyro_dlpf_t gyro_dlpf;
 	rc_accel_dlpf_t accel_dlpf;
-	
-	// magnetometer use is optional 
+
+	// magnetometer use is optional
 	int enable_magnetometer; // 0 or 1
-	
+
 	// DMP settings, only used with DMP interrupt
 	int dmp_sample_rate;
 	rc_imu_orientation_t orientation; //orientation matrix
@@ -670,21 +670,21 @@ typedef struct rc_imu_data_t{
 	float gyro[3];	// units of degrees/s
 	float mag[3];	// units of uT
 	float temp;		// units of degrees Celsius
-	
+
 	// 16 bit raw adc readings from each sensor
-	int16_t raw_gyro[3];	
+	int16_t raw_gyro[3];
 	int16_t raw_accel[3];
-	
+
 	// FSR-derived conversion ratios from raw to real units
 	float accel_to_ms2;	// to m/s^2
 	float gyro_to_degs;	// to degrees/s
-	
+
 	// everything below this line is available in DMP mode only
 	// quaternion and TaitBryan angles from DMP based on ONLY Accel/Gyro
 	float dmp_quat[4];		// normalized quaternion
 	float dmp_TaitBryan[3];	// radians pitch/roll/yaw X/Y/Z
-	
-	// If magnetometer is enabled in DMP mode, the following quaternion and 
+
+	// If magnetometer is enabled in DMP mode, the following quaternion and
 	// TaitBryan angles will be available which add magnetometer data to filter
 	float fused_quat[4];		// normalized quaternion
 	float fused_TaitBryan[3];	// radians pitch/roll/yaw X/Y/Z
@@ -721,28 +721,28 @@ int rc_is_mag_calibrated();
 /*******************************************************************************
 * I2C functions
 *
-* I2C bus 1 is broken out on the robotics cape on socket "I2C1" and is free for 
-* the user to have full authority over. Bus 0 is used internally on the cape 
-* for the IMU and barometer. The user should not use bus 0 unless they know what 
-* they are doing. The IMU and barometer functions 
+* I2C bus 1 is broken out on the robotics cape on socket "I2C1" and is free for
+* the user to have full authority over. Bus 0 is used internally on the cape
+* for the IMU and barometer. The user should not use bus 0 unless they know what
+* they are doing. The IMU and barometer functions
 *
 * @ int rc_i2c_init(int bus, uint8_t devAddr)
 * This initializes an I2C bus (0 or 1) at 400khz as defined in the device tree.
-* The bus speed cannot be modified. devAddr is the 8-bit i2c address of the 
-* device you wish to communicate with. This devAddr can be changed later 
+* The bus speed cannot be modified. devAddr is the 8-bit i2c address of the
+* device you wish to communicate with. This devAddr can be changed later
 * without initializing. rc_i2c_init only needs to be called once per bus.
-* 
+*
 * @ int set_device_address(int bus, uint8_t devAddr)
 * Use this to change to another device address after initialization.
-* 
-* @ int rc_i2c_close(int bus) 
+*
+* @ int rc_i2c_close(int bus)
 * Closes the bus and device file descriptors.
 *
 * @int rc_i2c_claim_bus(int bus)
 * @int rc_i2c_release_bus(int bus)
 * @int rc_i2c_get_in_use_state(int bus)
-* Claim and release bus are purely for the convenience of the user and are not 
-* necessary. They simply set a flag indicating that the bus is in use to help 
+* Claim and release bus are purely for the convenience of the user and are not
+* necessary. They simply set a flag indicating that the bus is in use to help
 * manage multiple device access in multithreaded applications.
 *
 * @ int rc_i2c_read_byte(int bus, uint8_t regAddr, uint8_t *data)
@@ -752,7 +752,7 @@ int rc_is_mag_calibrated();
 * @ int rc_i2c_read_bit(int bus, uint8_t regAddr, uint8_t bitNum, uint8_t *data)
 * These rc_i2c_read functions are for reading data from a particular register.
 * This sends the device address and register address to be read from before
-* reading the response. 
+* reading the response.
 *
 * @ int rc_i2c_write_byte(int bus, uint8_t regAddr, uint8_t data);
 * @ int rc_i2c_write_bytes(int bus, uint8_t regAddr, uint8_t length, uint8_t* data)
@@ -764,15 +764,15 @@ int rc_is_mag_calibrated();
 *
 * @ int rc_i2c_send_bytes(int bus, uint8_t length, uint8_t* data)
 * @ int rc_i2c_send_byte(int bus, uint8_t data)
-* Instead of automatically sending a device address before the data which is 
-* what happens in the above read and write functions, the rc_i2c_send functions 
+* Instead of automatically sending a device address before the data which is
+* what happens in the above read and write functions, the rc_i2c_send functions
 * send only the data given by the data argument. This is useful for more
 * complicated IO such as uploading firmware to a device.
 *******************************************************************************/
 int rc_i2c_init(int bus, uint8_t devAddr);
 int rc_i2c_close(int bus);
 int rc_i2c_set_device_address(int bus, uint8_t devAddr);
- 
+
 int rc_i2c_claim_bus(int bus);
 int rc_i2c_release_bus(int bus);
 int rc_i2c_get_in_use_state(int bus);
@@ -795,14 +795,14 @@ int rc_i2c_send_byte(int bus, uint8_t data);
 /*******************************************************************************
 * SPI - Serial Peripheral Interface
 *
-* The Sitara's SPI bus is broken out on two JST SH 6-pin sockets labeled SPI1.1 
+* The Sitara's SPI bus is broken out on two JST SH 6-pin sockets labeled SPI1.1
 * and SPI1.2 These share clock and serial IO signals, but have independent slave
-* select lines. 
-* 
+* select lines.
+*
 * The slaves can be selected automatically by the SPI linux driver or manually
 * with select/deselect_spi_slave() functions. On the Robotics Cape, slave 1
 * can be used in either mode, but slave 2 must be selected manually. On the
-* BB Blue either slave can be used in manual or automatic modes. 
+* BB Blue either slave can be used in manual or automatic modes.
 *******************************************************************************/
 typedef enum ss_mode_t{
 	SS_MODE_AUTO,
@@ -818,7 +818,7 @@ int rc_spi_init(ss_mode_t ss_mode, int spi_mode, int speed_hz, int slave);
 int rc_spi_fd(int slave);
 int rc_spi_close(int slave);
 int rc_manual_select_spi_slave(int slave);
-int rc_manual_deselect_spi_slave(int slave);	
+int rc_manual_deselect_spi_slave(int slave);
 int rc_spi_send_bytes(char* data, int bytes, int slave);
 int rc_spi_read_bytes(char* data, int bytes, int slave);
 int rc_spi_transfer(char* tx_data, int tx_bytes, char* rx_data, int slave);
@@ -879,7 +879,7 @@ int rc_print_cpu_freq();
 * Because we wish to support different beagleboard products with this same
 * library, we must internally determine which board we are running on to decide
 * which pins to use. We make these functions available to the user in case they
-* wish to do the same. 
+* wish to do the same.
 * See the check_board example for a demonstration.
 *******************************************************************************/
 typedef enum rc_bb_model_t{
@@ -908,9 +908,9 @@ void rc_print_bb_model();
 * for pinmuxing.
 *
 * enum rc_pinmux_mode_t gives options for pinmuxing. Not every mode if available on
-* each pin. refer to the pin table for which to use. 
+* each pin. refer to the pin table for which to use.
 *
-* rc_set_default_pinmux() puts everything back to standard and is used by 
+* rc_set_default_pinmux() puts everything back to standard and is used by
 * initialize_cape
 *******************************************************************************/
 // Cape and Blue
@@ -918,8 +918,8 @@ void rc_print_bb_model();
 #define GPS_HEADER_PIN_4		3	// P9_21, normally GPS UART2 TX
 #define UART1_HEADER_PIN_3		14	// P9_26, normally UART1 RX
 #define UART1_HEADER_PIN_4		15	// P9_24, normally UART1 TX
-#define SPI_HEADER_PIN_3		112	// P9_30, normally SPI1 MOSI		
-#define SPI_HEADER_PIN_4		111	// P9_29, normally SPI1 MISO	
+#define SPI_HEADER_PIN_3		112	// P9_30, normally SPI1 MOSI
+#define SPI_HEADER_PIN_4		111	// P9_29, normally SPI1 MISO
 #define SPI_HEADER_PIN_5		110	// P9_31, normally SPI1 SCLK
 
 // Cape Only
@@ -928,7 +928,7 @@ void rc_print_bb_model();
 
 // Blue Only
 #define BLUE_SPI_PIN_6_SS1		29	// gpio 0_29  pin H18
-#define BLUE_SPI_PIN_6_SS2		7	// gpio 0_7  pin C18		
+#define BLUE_SPI_PIN_6_SS2		7	// gpio 0_7  pin C18
 #define BLUE_GP0_PIN_3			57	// gpio 1_25 pin U16
 #define BLUE_GP0_PIN_4			49	// gpio 1_17 pin P9.23
 #define BLUE_GP0_PIN_5			116	// gpio 3_20 pin D13
@@ -986,7 +986,7 @@ int rc_gpio_get_value_mmap(int pin);
 * which have two available channels A and B. PWM subsystems 1 and 2 are used for
 * controlling the 4 motors on the Robotics Cape, however they may be controlled
 * by the user directly instead of using the motor API. PWM subsystem 0 channels
-* A and B can be accessed on the UART1 header if set up with the Pinmux API to 
+* A and B can be accessed on the UART1 header if set up with the Pinmux API to
 * do so. The user may have exclusive use of that subsystem.
 *
 * @ int rc_pwm_init(int ss, int frequency)
@@ -1037,55 +1037,55 @@ int rc_pwm_set_duty_mmap(int ss, char ch, float duty);
 * time
 *
 * @ void rc_nanosleep(uint64_t ns)
-* 
+*
 * A wrapper for the normal UNIX nanosleep function which takes a number of
 * nanoseconds instead of a timeval struct. This also handles restarting
 * nanosleep with the remaining time in the event that nanosleep is interrupted
 * by a signal. There is no upper limit on the time requested.
 *
 * @ void rc_usleep(uint64_t ns)
-* 
+*
 * The traditional usleep function, however common, is deprecated in linux as it
 * uses SIGALARM which interferes with alarm and timer functions. This uses the
 * new POSIX standard nanosleep to accomplish the same thing which further
 * supports sleeping for lengths longer than 1 second. This also handles
-* restarting nanosleep with the remaining time in the event that nanosleep is 
+* restarting nanosleep with the remaining time in the event that nanosleep is
 * interrupted by a signal. There is no upper limit on the time requested.
 *
 * @ uint64_t rc_timespec_to_micros(timespec ts)
-* 
+*
 * Returns a number of microseconds corresponding to a timespec struct.
 * Useful because timespec structs are annoying.
 *
 * @ uint64_t rc_timespec_to_millis(timespec ts)
-* 
+*
 * Returns a number of milliseconds corresponding to a timespec struct.
 * Useful because timespec structs are annoying.
 *
 * @ uint64_t rc_timeval_to_micros(timeval tv)
-* 
+*
 * Returns a number of microseconds corresponding to a timespec struct.
 * Useful because timeval structs are annoying.
 *
 * @ uint64_t rc_timeval_to_millis(timeval ts)
-* 
+*
 * Returns a number of milliseconds corresponding to a timespec struct.
 * Useful because timeval structs are annoying.
 *
 * @ uint64_t rc_nanos_since_epoch()
-* 
+*
 * Returns the number of nanoseconds since epoch using system CLOCK_REALTIME
 * This function itself takes about 1100ns to complete at 1ghz under ideal
 * circumstances.
 *
 * @ uint64_t rc_nanos_since_boot()
-* 
+*
 * Returns the number of nanoseconds since system boot using CLOCK_MONOTONIC
 * This function itself takes about 1100ns to complete at 1ghz under ideal
 * circumstances.
 *
 * @ uint64_t rc_nanos_thread_time()
-* 
+*
 * Returns the number of nanoseconds from when when the calling thread was
 * started in CPU time. This time only increments when the processor is working
 * on the calling thread and not when the thread is sleeping. This is usually for
@@ -1093,14 +1093,14 @@ int rc_pwm_set_duty_mmap(int ss, char ch, float duty);
 * takes about 2100ns to complete at 1ghz under ideal circumstances.
 *
 * @ timespec rc_timespec_diff(timespec start, timespec end)
-* 
+*
 * Returns the time difference between two timespec structs as another timespec.
 * Convenient for use with nanosleep() function and accurately timed loops.
 * Unlike timespec_sub defined in time.h, rc_timespec_diff does not care which
 * came first, A or B. A positive difference in time is always returned.
 *
 * @ int rc_timespec_add(timespec* start, double seconds)
-* 
+*
 * Adds an amount of time in seconds to a timespec struct. The time added is a
 * floating point value to make respresenting fractions of a second easier.
 * the timespec is passed as a pointer so it can be modified in place.
@@ -1126,13 +1126,13 @@ void rc_timespec_add(timespec* start, double seconds);
 *
 * @ void rc_null_func()
 *
-* A simple function that just returns. This exists so function pointers can be 
+* A simple function that just returns. This exists so function pointers can be
 * set to do nothing such as button and imu interrupt handlers.
 *
 * @ float rc_get_random_float()
 * @ double rc_get_random_double()
 *
-* Returns a random single or double prevision point value between -1 and 1. 
+* Returns a random single or double prevision point value between -1 and 1.
 * These are here because the rand() function from stdlib.h only returns and
 * integer. These are highly optimized routines that use bitwise operation
 * instead of floating point division.
@@ -1140,12 +1140,12 @@ void rc_timespec_add(timespec* start, double seconds);
 * @ int rc_saturate_float(float* val, float min, float max)
 * @ int rc_saturate_double(double* val, double min, double max)
 *
-* Modifies val to be bounded between between min and max. Returns 1 if 
+* Modifies val to be bounded between between min and max. Returns 1 if
 * saturation occurred, 0 if val was already in bound, and -1 if min was falsely
 * larger than max.
 *
 * @ char *rc_byte_to_binary(char x)
-* 
+*
 * This returns a string (char*) of '1' and '0' representing a character.
 * For example, print "00101010" with printf(rc_byte_to_binary(42));
 *
@@ -1158,7 +1158,7 @@ void rc_timespec_add(timespec* start, double seconds);
 * int ret = rc_suppress_stdout(&foo);
 *
 * @ int rc_suppress_stderr(int (*func)(void))
-* 
+*
 * executes a functiton func with all outputs to stderr suppressed. func must
 * take no arguments and must return an integer. Adapt this source to your
 * liking if you need to pass arguments. For example, if you have a function
@@ -1169,8 +1169,8 @@ void rc_timespec_add(timespec* start, double seconds);
 *
 * This is a blocking function which returns 1 if the user presses ENTER.
 * it returns 0 on any other keypress. If ctrl-C is pressed it will
-* additionally set the global state to EXITITING and return -1. 
-* This is a useful function for checking if the user wishes to continue with a 
+* additionally set the global state to EXITITING and return -1.
+* This is a useful function for checking if the user wishes to continue with a
 * process or quit.
 *
 * @ float rc_version_float()
@@ -1231,9 +1231,9 @@ typedef struct rc_matrix_t{
 * Allocates memory for vector v to have specified length. If v is initially the
 * right length then nothing is done and the data in v is preserved. If v is
 * uninitialized or of the wrong length then any existing memory is freed and new
-* memory is allocated, helping to prevent accidental memory leaks. The contents 
+* memory is allocated, helping to prevent accidental memory leaks. The contents
 * of the new vector is not guaranteed to be anything in particular.
-* Returns 0 if successful, otherwise returns -1. Will only be unsuccessful if 
+* Returns 0 if successful, otherwise returns -1. Will only be unsuccessful if
 * length is invalid or there is insufficient memory available.
 *
 * @ int rc_free_vector(rc_vector_t* v)
@@ -1250,7 +1250,7 @@ typedef struct rc_matrix_t{
 * Returns an rc_vector_t with no allocated memory and the initialized flag set
 * to 0. This is useful for initializing vectors when they are declared since
 * local variables declared in a function without global variable scope in C are
-* not guaranteed to be zeroed out which can lead to bad memory pointers and 
+* not guaranteed to be zeroed out which can lead to bad memory pointers and
 * segfaults if not handled carefully. We recommend initializing all
 * vectors with this function before using rc_alloc_matrix or any other function.
 *
@@ -1272,7 +1272,7 @@ typedef struct rc_matrix_t{
 *
 * Resizes vector v and allocates memory for a vector with specified length.
 * The new memory is pre-filled with random floating-point values between -1.0f
-* and 1.0f. Any existing memory allocated for v is freed if necessary to avoid 
+* and 1.0f. Any existing memory allocated for v is freed if necessary to avoid
 * memory leaks.
 * Returns 0 on success or -1 on error.
 *
@@ -1283,7 +1283,7 @@ typedef struct rc_matrix_t{
 *
 * @ int rc_vector_from_array(rc_vector_t* v, float* ptr, int length)
 *
-* Sometimes you will have a normal C-array of floats and wish to convert to 
+* Sometimes you will have a normal C-array of floats and wish to convert to
 * rc_vector_t format for use with the other linear algebra functions.
 * This function duplicates the contents of an array of floats into vector v and
 * ensures v is sized correctly. Existing data in v (if any) is freed and lost.
@@ -1308,11 +1308,11 @@ typedef struct rc_matrix_t{
 *
 * However, we provide this function for completeness. It is not strictly
 * necessary for v to be provided as a pointer as a copy of the struct v
-* would also contain the correct pointer to the original vector's allocated 
-* memory. However, in this library we use the convention of passing an 
-* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be 
-* modified by the function, and as a normal argument when it is only to be read 
-* by the function. 
+* would also contain the correct pointer to the original vector's allocated
+* memory. However, in this library we use the convention of passing an
+* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be
+* modified by the function, and as a normal argument when it is only to be read
+* by the function.
 * Returns 0 on success or -1 on error.
 *
 * @ float rc_get_vector_entry(rc_vector_t v, int pos)
@@ -1330,24 +1330,24 @@ typedef struct rc_matrix_t{
 * @ int rc_print_vector(rc_vector_t v)
 *
 * Prints to stdout the contents of vector v in one line. This is not advisable
-* for extremely long vectors but serves for quickly debugging or printing 
-* results. It prints 4 decimal places with padding for a sign. We recommend 
+* for extremely long vectors but serves for quickly debugging or printing
+* results. It prints 4 decimal places with padding for a sign. We recommend
 * rc_print_vector_sci() for very small or very large numbers where scientific
 * notation would be more appropriate. Returns 0 on success or -1 on failure.
 *
 * @ int rc_print_vector_sci(rc_vector_t v)
 *
 * Prints to stdout the contents of vector v in one line. This is not advisable
-* for extremely long vectors but serves for quickly debugging or printing 
+* for extremely long vectors but serves for quickly debugging or printing
 *
 * @ int rc_vector_times_scalar(rc_vector_t* v, float s)
 *
 * Multiplies every entry in vector v by scalar s. It is not strictly
 * necessary for v to be provided as a pointer since a copy of the struct v
-* would also contain the correct pointer to the original vector's allocated 
-* memory. However, in this library we use the convention of passing an 
-* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be 
-* modified by the function, and as a normal argument when it is only to be read 
+* would also contain the correct pointer to the original vector's allocated
+* memory. However, in this library we use the convention of passing an
+* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be
+* modified by the function, and as a normal argument when it is only to be read
 * by the function.
 * Returns 0 on success or -1 on failure.
 *
@@ -1361,13 +1361,13 @@ typedef struct rc_matrix_t{
 *
 * @ int rc_vector_max(rc_vector_t v)
 *
-* Returns the index of the maximum value in v or -1 on failure. The value 
+* Returns the index of the maximum value in v or -1 on failure. The value
 * contained in the returned index is the equivalent to the infinity norm. If the
 * max value occurs multiple times then the first instance is returned.
 *
 * @ int rc_vector_min(rc_vector_t v)
 *
-* Returns the index of the minimum value in v or -1 on failure. The value 
+* Returns the index of the minimum value in v or -1 on failure. The value
 * contained in the returned index is the equivalent to the minus-infinity norm.
 * If the min value occurs multiple times then the first instance is returned.
 *
@@ -1390,7 +1390,7 @@ typedef struct rc_matrix_t{
 * on error.
 *
 * @ int rc_vector_outer_product(rc_vector_t v1, rc_vector_t v2, rc_matrix_t* A)
-* 
+*
 * Computes v1 times v2 where v1 is a column vector and v2 is a row vector.
 * Output is a matrix with same rows as v1 and same columns as v2.
 * Returns 0 on success, otherwise -1.
@@ -1446,13 +1446,13 @@ int   rc_vector_sum_inplace(rc_vector_t* v1, rc_vector_t v2);
 *
 * @ int rc_alloc_matrix(rc_matrix_t* A, int rows, int cols)
 *
-* Allocates memory for matrix A to have new dimensions given by arguments rows 
+* Allocates memory for matrix A to have new dimensions given by arguments rows
 * and cols. If A is initially the right size, nothing is done and the data in A
 * is preserved. If A is uninitialized or of the wrong size then any existing
 * memory is freed and new memory is allocated, helping to prevent accidental
 * memory leaks. The contents of the new matrix is not guaranteed to be anything
 * in particular.
-* Returns 0 on success, otherwise -1. Will only be unsuccessful if 
+* Returns 0 on success, otherwise -1. Will only be unsuccessful if
 * rows&cols are invalid or there is insufficient memory available.
 *
 * @ int rc_free_matrix(rc_matrix_t* A)
@@ -1469,14 +1469,14 @@ int   rc_vector_sum_inplace(rc_vector_t* v1, rc_vector_t v2);
 * Returns an rc_matrix_t with no allocated memory and the initialized flag set
 * to 0. This is useful for initializing rc_matrix_t structs when they are
 * declared since local variables declared in a function without global variable
-* scope in C are not guaranteed to be zeroed out which can lead to bad memory 
+* scope in C are not guaranteed to be zeroed out which can lead to bad memory
 * pointers and segfaults if not handled carefully. We recommend initializing all
 * matrices with this before using rc_alloc_matrix or any other function.
 *
 * @ int rc_matrix_zeros(rc_matrix_t* A, int rows, int cols)
 *
 * Resizes matrix A and allocates memory for a matrix with specified rows &
-* columns. The new memory is pre-filled with zeros. Any existing memory 
+* columns. The new memory is pre-filled with zeros. Any existing memory
 * allocated for A is freed if necessary to avoid memory leaks.
 * Returns 0 on success or -1 on error.
 *
@@ -1495,7 +1495,7 @@ int   rc_vector_sum_inplace(rc_vector_t* v1, rc_vector_t v2);
 *
 * @ int rc_diag_matrix(rc_matrix_t* A, rc_vector_t v)
 *
-* Resizes A to be a square matrix with the same number of rows and columns as 
+* Resizes A to be a square matrix with the same number of rows and columns as
 * vector v's length. The diagonal entries of A are then populated with the
 * contents of v and the off-diagonal entries are set to 0. The original contents
 * of A are freed to avoid memory leaks.
@@ -1519,10 +1519,10 @@ int   rc_vector_sum_inplace(rc_vector_t* v1, rc_vector_t v2);
 *
 * However, we provide this function for completeness. It is not strictly
 * necessary for A to be provided as a pointer since a copy of the struct A
-* would also contain the correct pointer to the original matrix's allocated 
-* memory. However, in this library we use the convention of passing an 
-* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be 
-* modified by the function, and as a normal argument when it is only to be read 
+* would also contain the correct pointer to the original matrix's allocated
+* memory. However, in this library we use the convention of passing an
+* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be
+* modified by the function, and as a normal argument when it is only to be read
 * by the function. Returns 0 on success or -1 on error.
 *
 * @ float rc_get_matrix_entry(rc_matrix_t A, int row, int col)
@@ -1546,22 +1546,22 @@ int   rc_vector_sum_inplace(rc_vector_t* v1, rc_vector_t v2);
 * @ void rc_print_matrix_sci(rc_matrix_t A)
 *
 * Prints the contents of matrix A to stdout in scientific notation with 4
-* significant figures. Not recommended for very large matrices as rows will 
+* significant figures. Not recommended for very large matrices as rows will
 * typically linewrap if the terminal window is not wide enough.
 *
 * @ int rc_matrix_times_scalar(rc_matrix_t* A, float s)
 *
 * Multiplies every entry in A by scalar value s. It is not strictly
 * necessary for A to be provided as a pointer since a copy of the struct A
-* would also contain the correct pointer to the original matrix's allocated 
-* memory. However, in this library we use the convention of passing an 
-* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be 
-* modified by the function, and as a normal argument when it is only to be read 
+* would also contain the correct pointer to the original matrix's allocated
+* memory. However, in this library we use the convention of passing an
+* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be
+* modified by the function, and as a normal argument when it is only to be read
 * by the function. Returns 0 on success or -1 on failure.
 *
 * @ int rc_multiply_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C)
 *
-* Multiplies A*B=C. C is resized and its original contents are freed if 
+* Multiplies A*B=C. C is resized and its original contents are freed if
 * necessary to avoid memory leaks. Returns 0 on success or -1 on failure.
 *
 * @ int rc_left_multiply_matrix_inplace(rc_matrix_t A, rc_matrix_t* B)
@@ -1674,11 +1674,11 @@ int   rc_matrix_transpose_inplace(rc_matrix_t* A);
 * Thank you to Henry Guennadi Levkin for open sourcing this routine, it's
 * adapted here for RC use and includes better detection of unsolvable systems.
 * Returns 0 on success or -1 on failure.
-* 
+*
 * @ int rc_lin_system_solve_qr(rc_matrix_t A, rc_vector_t b, rc_vector_t* x)
 *
 * Finds a least-squares solution to the system Ax=b for non-square A using QR
-* decomposition method and places the solution in x. 
+* decomposition method and places the solution in x.
 * Returns 0 on success or -1 on failure.
 *
 * @ int rc_fit_ellipsoid(rc_matrix_t pts, rc_vector_t* ctr, rc_vector_t* lens)
@@ -1687,7 +1687,7 @@ int   rc_matrix_transpose_inplace(rc_matrix_t* A);
 * fitted ellipsoid align with the global coordinate system. Therefore there are
 * 6 degrees of freedom defining the ellipsoid: the x,y,z coordinates of the
 * centroid and the lengths from the centroid to the surface in each of the 3
-* directions. 
+* directions.
 *
 * rc_matrix_t 'pts' is a tall matrix with 3 columns and at least 6 rows.
 * Each row must contain the x,y&z components of each individual point to be fit.
@@ -1698,7 +1698,7 @@ int   rc_matrix_transpose_inplace(rc_matrix_t* A);
 * the lengths or radius from the centroid to the surface along each axis will
 * be placed in the vector 'lens'
 *
-* Returns 0 on success or -1 on failure. 
+* Returns 0 on success or -1 on failure.
 *******************************************************************************/
 int   rc_matrix_times_col_vec(rc_matrix_t A, rc_vector_t v, rc_vector_t* c);
 int   rc_row_vec_times_matrix(rc_vector_t v, rc_matrix_t A, rc_vector_t* c);
@@ -1759,12 +1759,12 @@ int   rc_fit_ellipsoid(rc_matrix_t pts, rc_vector_t* ctr, rc_vector_t* lens);
 *
 * @ int rc_poly_subtract_inplace(rc_vector_t* a, rc_vector_t b)
 *
-* Subtracts b from a with right justification. a stays in place and new memory 
+* Subtracts b from a with right justification. a stays in place and new memory
 * is allocated only if b is longer than a.
 *
 * @ int rc_poly_differentiate(rc_vector_t a, int d, rc_vector_t* b)
 *
-* Calculates the dth derivative of the polynomial a and places the result in 
+* Calculates the dth derivative of the polynomial a and places the result in
 * vector b. Returns 0 on success or -1 on failure.
 *
 * @ int rc_poly_divide(rc_vector_t n, rc_vector_t d, rc_vector_t* div, rc_vector_t* rem)
@@ -1811,14 +1811,14 @@ int rc_poly_butter(int N, float wc, rc_vector_t* b);
 * @ int rc_normalize_quaternion_array(float q[4])
 *
 * Same as normalize_quaternion but performs the action on an array instead of
-* a rc_vector_t type. 
+* a rc_vector_t type.
 *
 * @ int rc_quaternion_to_tb(rc_vector_t q, rc_vector_t* tb)
 *
 * Populates vector tb with 321 Tait Bryan angles in array order XYZ with
 * operation order 321(yaw-Z, pitch-Y, roll-x). If tb is already allocated and of
-* length 3 then the new values are written in place, otherwise any existing 
-* memory is freed and a new vector of length 3 is allocated for tb. 
+* length 3 then the new values are written in place, otherwise any existing
+* memory is freed and a new vector of length 3 is allocated for tb.
 * Returns 0 on success or -1 on failure.
 *
 * @ void rc_quaternion_to_tb_array(float q[4], float tb[3])
@@ -1827,7 +1827,7 @@ int rc_poly_butter(int N, float wc, rc_vector_t* b);
 *
 * @ int rc_tb_to_quaternion(rc_vector_t tb, rc_vector_t* q)
 *
-* Populates quaternion vector q with the quaternion corresponding to the 
+* Populates quaternion vector q with the quaternion corresponding to the
 * tait-bryan pitch-roll-yaw values in vector tb. If q is already of length 4
 * then old contents are simply overwritten. Otherwise q'd existing memory is
 * freed and new memory is allocated to avoid memory leaks.
@@ -1839,10 +1839,10 @@ int rc_poly_butter(int N, float wc, rc_vector_t* b);
 *
 * @ int rc_quaternion_conjugate(rc_vector_t q, rc_vector_t* c)
 *
-* Populates quaternion vector c with the conjugate of quaternion q where the 3 
+* Populates quaternion vector c with the conjugate of quaternion q where the 3
 * imaginary parts ijk are multiplied by -1. If c is already of length 4 then the
 * old values are overwritten. Otherwise the old memory in c is freed and new
-* memory is allocated to help prevent memory leaks. 
+* memory is allocated to help prevent memory leaks.
 * Returns 0 on success or -1 on failure.
 *
 * @ int rc_quaternion_conjugate_inplace(rc_vector_t* q)
@@ -1852,7 +1852,7 @@ int rc_poly_butter(int N, float wc, rc_vector_t* b);
 *
 * @ void rc_quaternion_conjugate_array(float q[4], float c[4])
 *
-* Populates quaternion vector c with the conjugate of quaternion q where the 3 
+* Populates quaternion vector c with the conjugate of quaternion q where the 3
 * imaginary parts ijk are multiplied by -1.
 * Returns 0 on success or -1 on failure.
 *
@@ -1871,9 +1871,9 @@ int rc_poly_butter(int N, float wc, rc_vector_t* b);
 * @ int rc_quaternion_multiply(rc_vector_t a, rc_vector_t b, rc_vector_t* c)
 *
 * Calculates the quaternion Hamilton product ab=c and places the result in
-* vector argument c. If c is already of length 4 then the old values are 
+* vector argument c. If c is already of length 4 then the old values are
 * overwritten. Otherwise the old memory in c is freed and new memory is
-* allocated to help prevent memory leaks. 
+* allocated to help prevent memory leaks.
 * Returns 0 on success or -1 on failure.
 *
 * @ void rc_quaternion_multiply_array(float a[4], float b[4], float c[4])
@@ -1882,23 +1882,23 @@ int rc_poly_butter(int N, float wc, rc_vector_t* b);
 *
 * @ int rc_rotate_quaternion(rc_vector_t* p, rc_vector_t q)
 *
-* Rotates the quaternion p by quaternion q with the operation p'=qpq* 
+* Rotates the quaternion p by quaternion q with the operation p'=qpq*
 * Returns 0 on success or -1 on failure.
 *
 * @ void rc_rotate_quaternion_array(float p[4], float q[4])
 *
-* Rotates the quaternion p by quaternion q with the operation p'=qpq* 
+* Rotates the quaternion p by quaternion q with the operation p'=qpq*
 *
 * @ int rc_quaternion_rotate_vector(rc_vector_t* v, rc_vector_t q)
 *
 * Rotate a 3D vector v in-place about the origin by quaternion q by converting
-* v to a quaternion and performing the operation p'=qpq* 
+* v to a quaternion and performing the operation p'=qpq*
 * Returns 0 on success or -1 on failure.
 *
 * @ void rc_quaternion_rotate_vector_array(float v[3], float q[4])
 *
 * Rotate a 3D vector v in-place about the origin by quaternion q by converting
-* v to a quaternion and performing the operation p'=qpq* 
+* v to a quaternion and performing the operation p'=qpq*
 *
 * @ int rc_quaternion_to_rotation_matrix(rc_vector_t q, rc_matrix_t* m)
 *
@@ -1937,7 +1937,7 @@ int   rc_quaternion_to_rotation_matrix(rc_vector_t q, rc_matrix_t* m);
 * suited for storing the last n values in a discrete time filter.
 *
 * The user creates their own instance of a buffer and passes a pointer to the
-* these ring_buf functions to perform normal operations. 
+* these ring_buf functions to perform normal operations.
 *
 * @ int rc_alloc_ringbuf(rc_ringbuf_t* buf, int size)
 *
@@ -1966,15 +1966,15 @@ int   rc_quaternion_to_rotation_matrix(rc_vector_t q, rc_matrix_t* m);
 * Returns 0 on success or -1 on failure.
 *
 * @ int rc_insert_new_ringbuf_value(rc_ringbuf_t* buf, float val)
-* 
+*
 * Puts a new float into the ring buffer and updates the index accordingly.
 * If the buffer was full then the oldest value in the buffer is automatically
 * removed. Returns 0 on success or -1 on failure.
 *
 * @ float rc_get_ringbuf_value(rc_ringbuf_t* buf, int pos)
 *
-* Returns the float which is 'pos' steps behind the last value added to the 
-* buffer. If 'position' is given as 0 then the most recent value is returned. 
+* Returns the float which is 'pos' steps behind the last value added to the
+* buffer. If 'position' is given as 0 then the most recent value is returned.
 * Position 'pos' obviously can't be larger than the buffer size minus 1.
 * Prints an error message and return -1.0f on error.
 *
@@ -2000,14 +2000,14 @@ float rc_std_dev_ringbuf(rc_ringbuf_t buf);
 /*******************************************************************************
 * Discrete SISO Filters
 *
-* This is a collection of functions for generating and implementing discrete 
-* SISO filters for arbitrary transfer functions. 
+* This is a collection of functions for generating and implementing discrete
+* SISO filters for arbitrary transfer functions.
 *
 * @ int rc_alloc_filter(rc_filter_t* f, rc_vector_t num, rc_vector_t den, float dt)
 *
 * Allocate memory for a discrete-time filter & populates it with the transfer
 * function coefficients provided in vectors num and den. The memory in num and
-* den is duplicated so those vectors can be reused or freed after allocating a 
+* den is duplicated so those vectors can be reused or freed after allocating a
 * filter without fear of disturbing the function of the filter. Argument dt is
 * the timestep in seconds at which the user expects to operate the filter.
 * The length of demonimator den must be at least as large as numerator num to
@@ -2079,8 +2079,8 @@ float rc_std_dev_ringbuf(rc_ringbuf_t buf);
 * @ int enable_soft_start(rc_filter_t* filter, float seconds)
 *
 * Enables soft start functionality where the output bound is gradually opened
-* linearly from 0 to the normal saturation range. This occurs over the time 
-* specified from argument 'seconds' from when the filter is first created or 
+* linearly from 0 to the normal saturation range. This occurs over the time
+* specified from argument 'seconds' from when the filter is first created or
 * reset. Saturation must already be enabled for this to work. This assumes that
 * the user does indeed call rc_march_filter at roughly the same time interval
 * as the 'dt' variable in the filter struct which is set at creation time.
@@ -2139,7 +2139,7 @@ float rc_std_dev_ringbuf(rc_ringbuf_t buf);
 * Returns 0 on success or -1 on failure.
 *
 * @ int rc_c2d_tustin(rc_filter_t* f,rc_vector_t num,rc_vector_t den,float dt,float w)
-* 
+*
 * Creates a discrete time filter with similar dynamics to a provided continuous
 * time transfer function using tustin's approximation with prewarping about a
 * frequency of interest 'w' in radians per second.
@@ -2155,18 +2155,18 @@ float rc_std_dev_ringbuf(rc_ringbuf_t buf);
 *
 * @ int rc_first_order_lowpass(rc_filter_t* f, float dt, float time_constant)
 *
-* Creates a first order low pass filter. Any existing memory allocated for f is 
-* freed safely to avoid memory leaks and new memory is allocated for the new 
-* filter. dt is in units of seconds and time_constant is the number of seconds 
+* Creates a first order low pass filter. Any existing memory allocated for f is
+* freed safely to avoid memory leaks and new memory is allocated for the new
+* filter. dt is in units of seconds and time_constant is the number of seconds
 * it takes to rise to 63.4% of a steady-state input. This can be used alongside
 * rc_first_order_highpass to make a complementary filter pair.
 * Returns 0 on success or -1 on failure.
 *
 * @ int rc_first_order_highpass(rc_filter_t* f, float dt, float time_constant)
 *
-* Creates a first order high pass filter. Any existing memory allocated for f is 
-* freed safely to avoid memory leaks and new memory is allocated for the new 
-* filter. dt is in units of seconds and time_constant is the number of seconds 
+* Creates a first order high pass filter. Any existing memory allocated for f is
+* freed safely to avoid memory leaks and new memory is allocated for the new
+* filter. dt is in units of seconds and time_constant is the number of seconds
 * it takes to decay by 63.4% of a steady-state input. This can be used alongside
 * rc_first_order_lowpass to make a complementary filter pair.
 * Returns 0 on success or -1 on failure.
@@ -2204,7 +2204,7 @@ float rc_std_dev_ringbuf(rc_ringbuf_t buf);
 *
 * @ int rc_double_integrator(rc_filter_t* f, float dt)
 *
-* Creates a second order double integrator. Like most functions here, the 
+* Creates a second order double integrator. Like most functions here, the
 * dynamics are only accurate if the filter is called with a timestep
 * corresponding to dt. Any existing memory allocated for f is freed safely to
 * avoid memory leaks and new memory is allocated for the new filter.
@@ -2212,8 +2212,8 @@ float rc_std_dev_ringbuf(rc_ringbuf_t buf);
 *
 * @ int rc_pid_filter(rc_filter_t* f,float kp,float ki,float kd,float Tf,float dt)
 *
-* Creates a discrete-time implementation of a parallel PID controller with 
-* high-frequency rolloff. This is equivalent to the Matlab function: 
+* Creates a discrete-time implementation of a parallel PID controller with
+* high-frequency rolloff. This is equivalent to the Matlab function:
 * C = pid(Kp,Ki,Kd,Tf,Ts)
 *
 * We cannot implement a pure differentiator with a discrete transfer function
@@ -2226,8 +2226,8 @@ typedef struct rc_filter_t{
 	int order;			// transfer function order
 	float dt;			// timestep in seconds
 	float gain;			// gain usually 1.0
-	rc_vector_t num;	// numerator coefficients 
-	rc_vector_t den;	// denominator coefficients 
+	rc_vector_t num;	// numerator coefficients
+	rc_vector_t den;	// denominator coefficients
 	// saturation settings
 	int sat_en;			// set to 1 by enable_saturation()
 	float sat_min;		// lower saturation limit

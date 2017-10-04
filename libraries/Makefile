@@ -6,10 +6,10 @@ CC		:= gcc
 LINKER		:= gcc
 CWARNINGS	:= -Wall -Wextra
 # achitecture flags enables the NEON hardware SIMD floating point unit
-ARCFLAGS	:= -mfpu=neon -mfloat-abi=hard -march=armv7-a -mtune=cortex-a8 
+ARCFLAGS	:= -mfpu=neon -mfloat-abi=hard -march=armv7-a -mtune=cortex-a8
 # enable O3 optimization and vectorized math
 FFLAGS		:= -O3 -ffast-math -ftree-vectorize
-CFLAGS		:= -c -fPIC
+CFLAGS		:= -c -fPIC -Iinclude/rc
 LFLAGS		:= -lm -lrt -lpthread -shared -Wl,-soname,$(TARGET)
 
 SOURCES		:= $(shell find ./ -name '*.c')
@@ -18,7 +18,7 @@ OBJECTS		:= $(SOURCES:$%.c=$%.o)
 
 prefix		:= /usr
 RM		:= rm -f -r
-INSTALL		:= install -m 755 
+INSTALL		:= install -m 755
 INSTALLDIR	:= install -d -m 755
 
 
