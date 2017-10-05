@@ -4,7 +4,7 @@ TARGET = rc_project_template
 
 CC		:= gcc
 LINKER		:= gcc -o
-CFLAGS		:= -c -Wall -g
+CFLAGS		:= -c -Wall
 LFLAGS		:= -lm -lrt -lpthread -lroboticscape
 
 SOURCES		:= $(wildcard *.c)
@@ -14,7 +14,7 @@ OBJECTS		:= $(SOURCES:$%.c=$%.o)
 prefix		:= /usr/local
 RM		:= rm -f
 INSTALL		:= install -m 4755
-INSTALLDIR	:= install -d -m 755 
+INSTALLDIR	:= install -d -m 755
 
 LINK		:= ln -s -f
 LINKDIR		:= /etc/roboticscape
@@ -28,7 +28,7 @@ $(TARGET): $(OBJECTS)
 
 # compiling command
 $(OBJECTS): %.o : %.c $(INCLUDES)
-	@$(CC) $(CFLAGS) -c $< -o $(@)
+	@$(CC) $(CFLAGS) $(DEBUGFLAG) $< -o $(@)
 	@echo "Compiled: "$<
 
 all:
