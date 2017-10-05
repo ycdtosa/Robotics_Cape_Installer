@@ -30,9 +30,9 @@ typedef struct rc_vector_t{
 * Allocates memory for vector v to have specified length. If v is initially the
 * right length then nothing is done and the data in v is preserved. If v is
 * uninitialized or of the wrong length then any existing memory is freed and new
-* memory is allocated, helping to prevent accidental memory leaks. The contents 
+* memory is allocated, helping to prevent accidental memory leaks. The contents
 * of the new vector is not guaranteed to be anything in particular.
-* Returns 0 if successful, otherwise returns -1. Will only be unsuccessful if 
+* Returns 0 if successful, otherwise returns -1. Will only be unsuccessful if
 * length is invalid or there is insufficient memory available.
 *
 * @ int rc_free_vector(rc_vector_t* v)
@@ -49,7 +49,7 @@ typedef struct rc_vector_t{
 * Returns an rc_vector_t with no allocated memory and the initialized flag set
 * to 0. This is useful for initializing vectors when they are declared since
 * local variables declared in a function without global variable scope in C are
-* not guaranteed to be zeroed out which can lead to bad memory pointers and 
+* not guaranteed to be zeroed out which can lead to bad memory pointers and
 * segfaults if not handled carefully. We recommend initializing all
 * vectors with this function before using rc_alloc_matrix or any other function.
 *
@@ -71,7 +71,7 @@ typedef struct rc_vector_t{
 *
 * Resizes vector v and allocates memory for a vector with specified length.
 * The new memory is pre-filled with random floating-point values between -1.0f
-* and 1.0f. Any existing memory allocated for v is freed if necessary to avoid 
+* and 1.0f. Any existing memory allocated for v is freed if necessary to avoid
 * memory leaks.
 * Returns 0 on success or -1 on error.
 *
@@ -82,7 +82,7 @@ typedef struct rc_vector_t{
 *
 * @ int rc_vector_from_array(rc_vector_t* v, float* ptr, int length)
 *
-* Sometimes you will have a normal C-array of floats and wish to convert to 
+* Sometimes you will have a normal C-array of floats and wish to convert to
 * rc_vector_t format for use with the other linear algebra functions.
 * This function duplicates the contents of an array of floats into vector v and
 * ensures v is sized correctly. Existing data in v (if any) is freed and lost.
@@ -107,11 +107,11 @@ typedef struct rc_vector_t{
 *
 * However, we provide this function for completeness. It is not strictly
 * necessary for v to be provided as a pointer as a copy of the struct v
-* would also contain the correct pointer to the original vector's allocated 
-* memory. However, in this library we use the convention of passing an 
-* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be 
-* modified by the function, and as a normal argument when it is only to be read 
-* by the function. 
+* would also contain the correct pointer to the original vector's allocated
+* memory. However, in this library we use the convention of passing an
+* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be
+* modified by the function, and as a normal argument when it is only to be read
+* by the function.
 * Returns 0 on success or -1 on error.
 *
 * @ float rc_get_vector_entry(rc_vector_t v, int pos)
@@ -129,24 +129,24 @@ typedef struct rc_vector_t{
 * @ int rc_print_vector(rc_vector_t v)
 *
 * Prints to stdout the contents of vector v in one line. This is not advisable
-* for extremely long vectors but serves for quickly debugging or printing 
-* results. It prints 4 decimal places with padding for a sign. We recommend 
+* for extremely long vectors but serves for quickly debugging or printing
+* results. It prints 4 decimal places with padding for a sign. We recommend
 * rc_print_vector_sci() for very small or very large numbers where scientific
 * notation would be more appropriate. Returns 0 on success or -1 on failure.
 *
 * @ int rc_print_vector_sci(rc_vector_t v)
 *
 * Prints to stdout the contents of vector v in one line. This is not advisable
-* for extremely long vectors but serves for quickly debugging or printing 
+* for extremely long vectors but serves for quickly debugging or printing
 *
 * @ int rc_vector_times_scalar(rc_vector_t* v, float s)
 *
 * Multiplies every entry in vector v by scalar s. It is not strictly
 * necessary for v to be provided as a pointer since a copy of the struct v
-* would also contain the correct pointer to the original vector's allocated 
-* memory. However, in this library we use the convention of passing an 
-* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be 
-* modified by the function, and as a normal argument when it is only to be read 
+* would also contain the correct pointer to the original vector's allocated
+* memory. However, in this library we use the convention of passing an
+* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be
+* modified by the function, and as a normal argument when it is only to be read
 * by the function.
 * Returns 0 on success or -1 on failure.
 *
@@ -160,13 +160,13 @@ typedef struct rc_vector_t{
 *
 * @ int rc_vector_max(rc_vector_t v)
 *
-* Returns the index of the maximum value in v or -1 on failure. The value 
+* Returns the index of the maximum value in v or -1 on failure. The value
 * contained in the returned index is the equivalent to the infinity norm. If the
 * max value occurs multiple times then the first instance is returned.
 *
 * @ int rc_vector_min(rc_vector_t v)
 *
-* Returns the index of the minimum value in v or -1 on failure. The value 
+* Returns the index of the minimum value in v or -1 on failure. The value
 * contained in the returned index is the equivalent to the minus-infinity norm.
 * If the min value occurs multiple times then the first instance is returned.
 *
@@ -189,7 +189,7 @@ typedef struct rc_vector_t{
 * on error.
 *
 * @ int rc_vector_outer_product(rc_vector_t v1, rc_vector_t v2, rc_matrix_t* A)
-* 
+*
 * Computes v1 times v2 where v1 is a column vector and v2 is a row vector.
 * Output is a matrix with same rows as v1 and same columns as v2.
 * Returns 0 on success, otherwise -1.

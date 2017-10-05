@@ -11,11 +11,11 @@
 
 #include <rc/other/preprocessor_macros.h>
 
-#define ZERO_TOLERANCE 1e-6 // consider v to be zero if fabs(v)<ZERO_TOLERANCE
+#define ZERO_TOLERANCE 1e-8 // consider v to be zero if fabs(v)<ZERO_TOLERANCE
 
 /*******************************************************************************
 * float rc_mult_accumulate(float * __restrict__ a, float * __restrict__ b, int n)
-* 
+*
 * Performs a vector dot product on the contents of a and b over n values.
 * This is a dangerous function that could segfault if not used properly. Hence
 * it is only for internal use in the RC library. the 'restrict' attributes tell

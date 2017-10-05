@@ -1,4 +1,5 @@
-
+#ifndef RC_LED_H
+#define RC_LED_H
 /*******************************************************************************
 * LEDs
 *
@@ -6,19 +7,19 @@
 * the Robotics Cape provides two LEDs for sole use by the user. One is red
 * and one is green. The included examples use the red LED to indicate a paused
 * or stopped state, and the green LED to indicate a running state. However
-* they are not tied to any other robotics cape library functions and can be 
+* they are not tied to any other robotics cape library functions and can be
 * used for whatever the user desires.
 *
 * @ typedef enum rc_led_t
-* 
+*
 * Two LEDs are available and defined by an enumerated type led_t which can be
 * RED or GREEN. Just like most boolean states in the C language, a 0 indicates
-* 'false' or 'off' and anything else indicates 'on' or 'true'. To make code 
+* 'false' or 'off' and anything else indicates 'on' or 'true'. To make code
 * easier to read, #defines are provided for 'ON' and 'OFF'.
 *
 * @ int rc_set_led(rc_led_t led, int state)
-* 
-* If state is 0 the LED will be turned off. If int state is non-zero then the 
+*
+* If state is 0 the LED will be turned off. If int state is non-zero then the
 * LED will be turned on. Returns 0 on success, -1 on failure.
 *
 * @ int rc_get_led_state(rc_led_t led)
@@ -28,22 +29,27 @@
 * threads may wish to use the same LED.
 *
 * @ int rc_blink_led(rc_led_t led, float hz, float period)
-* 
+*
 * Flash an LED at a set frequency for a finite period of time.
 * This is a blocking call and only returns after flashing.
 *
 * See the blink example for sample use case of all of these functions.
 *******************************************************************************/
 #ifndef ON
-#define ON 	1
+#define ON 1
 #endif
+
 #ifndef OFF
-#define OFF	0
+#define OFF 0
 #endif
+
 typedef enum rc_led_t {
 	GREEN,
 	RED
 } rc_led_t;
+
 int rc_set_led(rc_led_t led, int state);
 int rc_get_led(rc_led_t led);
 int rc_blink_led(rc_led_t led, float hz, float period);
+
+#endif // RC_LED_H

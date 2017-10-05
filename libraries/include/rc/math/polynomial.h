@@ -50,12 +50,12 @@
 *
 * @ int rc_poly_subtract_inplace(rc_vector_t* a, rc_vector_t b)
 *
-* Subtracts b from a with right justification. a stays in place and new memory 
+* Subtracts b from a with right justification. a stays in place and new memory
 * is allocated only if b is longer than a.
 *
 * @ int rc_poly_differentiate(rc_vector_t a, int d, rc_vector_t* b)
 *
-* Calculates the dth derivative of the polynomial a and places the result in 
+* Calculates the dth derivative of the polynomial a and places the result in
 * vector b. Returns 0 on success or -1 on failure.
 *
 * @ int rc_poly_divide(rc_vector_t n, rc_vector_t d, rc_vector_t* div, rc_vector_t* rem)
