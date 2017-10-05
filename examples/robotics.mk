@@ -11,7 +11,7 @@ OBJECTS		:= $(SOURCES:$%.c=$%.o)
 
 prefix		:= /usr
 RM		:= rm -f
-INSTALL		:= install -o root -g root -m 4755 
+INSTALL		:= install -o root -g root -m 4755
 INSTALLDIR	:= install -d -m 755
 
 LINK		:= ln -s -f
@@ -25,14 +25,12 @@ $(TARGET): $(OBJECTS)
 
 # compiling command
 $(OBJECTS): %.o : %.c $(INCLUDES)
-	@$(CC) $(CFLAGS) -c $< -o $(@)
+	@$(CC) $(CFLAGS) $< -o $(@)
 
-
-
-all: 
+all:
 	$(TARGET)
 
-install: 
+install:
 	@$(MAKE) --no-print-directory
 	@$(INSTALLDIR) $(DESTDIR)$(prefix)/bin
 	@$(INSTALL) $(TARGET) $(DESTDIR)$(prefix)/bin
@@ -43,10 +41,3 @@ clean:
 
 uninstall:
 	@$(RM) $(DESTDIR)$(prefix)/bin/$(TARGET)
-
-runonboot:
-	@$(MAKE) install --no-print-directory
-	@$(LINK) $(DESTDIR)$(prefix)/bin/$(TARGET) $(LINKDIR)/$(LINKNAME)
-	@echo "$(TARGET) Set to Run on Boot"
-
-	
