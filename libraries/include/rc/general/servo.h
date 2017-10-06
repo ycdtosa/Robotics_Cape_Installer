@@ -1,6 +1,3 @@
-#ifndef RC_SERVER_H
-#define RC_SERVO_H
-
 /******************************************************************************
 * SERVO AND ESC
 *
@@ -33,11 +30,11 @@
 * corresponding to the following pulse width range and angle.
 *
 * input     width   angle
-* -1.5		600us	90 deg anticlockwise
-* -1.0		900us	60 deg anticlockwise
-*  0.0		1500us	0 deg neutral
-*  1.0		2100us	60 deg clockwise
-*  1.5		2400us	90 deg clockwise
+* -1.5      600us  90 deg anticlockwise
+* -1.0      900us  60 deg anticlockwise
+*  0.0     1500us   0 deg neutral
+*  1.0     2100us  60 deg clockwise
+*  1.5     2400us  90 deg clockwise
 *
 * Note that all servos are different and do not necessarily allow the full
 * range of motion past +-1.0. DO NOT STALL SERVOS.
@@ -50,11 +47,11 @@
 * rc_send_esc_pulse_normalized(int ch, float input) also sends a single pulse
 * but the range is set for common ESCs
 *
-* input     width   power
-* -0.1		900     armed but idle
-* 0.0		1000us	0%   off
-* 0.5		1500us	50%  half-throttle
-* 1.0		2000us	100% full-throttle
+* input    width       power
+* -0.1      900      armed but idle
+* 0.0      1000us       0%   off
+* 0.5      1500us      50%  half-throttle
+* 1.0      2000us      100% full-throttle
 *
 * This assumes the ESCs have been calibrated for the 1000-2000us range. Use the
 * calibrate_escs example program to be sure.
@@ -71,6 +68,11 @@
 *
 * See the test_servos, sweep_servos, and calibrate_escs examples.
 ******************************************************************************/
+#ifndef RC_SERVER_H
+#define RC_SERVO_H
+
+int rc_initialize_servo();
+int rc_cleanup_servo();
 int rc_enable_servo_power_rail();
 int rc_disable_servo_power_rail();
 int rc_send_servo_pulse_us(int ch, int us);

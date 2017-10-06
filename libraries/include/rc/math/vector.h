@@ -1,8 +1,5 @@
-#ifndef RC_VECTOR_H
-#define RC_VECTOR_H
-
 /*******************************************************************************
-* Linear Algebra Types
+* Vectors
 *
 * The Vector and Matrix types here are used throughout the rest of the Robotics
 * Cape library behind the scenes, but are also available to the user along with
@@ -14,16 +11,6 @@
 * new vector or matrix. Then use rc_free_vector and rc_free_matrix to free the
 * memory when you are done using it. See the remaining vector, matrix, and
 * linear algebra functions for more details.
-*******************************************************************************/
-// vector type
-typedef struct rc_vector_t{
-	int len;
-	float* d;
-	int initialized;
-} rc_vector_t;
-
-/*******************************************************************************
-* Vectors
 *
 * @ int rc_alloc_vector(rc_vector_t* v, int length)
 *
@@ -212,6 +199,16 @@ typedef struct rc_vector_t{
 * are lost and v2 is left untouched.
 * Returns 0 on success, otherwise -1.
 *******************************************************************************/
+#ifndef RC_VECTOR_H
+#define RC_VECTOR_H
+
+// vector type
+typedef struct rc_vector_t{
+	int len;
+	float* d;
+	int initialized;
+} rc_vector_t;
+
 int   rc_alloc_vector(rc_vector_t* v, int length);
 int   rc_free_vector(rc_vector_t* v);
 rc_vector_t rc_empty_vector();
@@ -233,7 +230,6 @@ float rc_std_dev(rc_vector_t v);
 float rc_vector_mean(rc_vector_t v);
 int   rc_vector_projection(rc_vector_t v, rc_vector_t e, rc_vector_t* p);
 float rc_vector_dot_product(rc_vector_t v1, rc_vector_t v2);
-// int   rc_vector_outer_product(rc_vector_t v1, rc_vector_t v2, rc_matrix_t* A);
 int   rc_vector_cross_product(rc_vector_t v1, rc_vector_t v2, rc_vector_t* p);
 int   rc_vector_sum(rc_vector_t v1, rc_vector_t v2, rc_vector_t* s);
 int   rc_vector_sum_inplace(rc_vector_t* v1, rc_vector_t v2);

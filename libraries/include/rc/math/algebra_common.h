@@ -1,13 +1,9 @@
-#ifndef RC_ALGEBRA_COMMON_H
-#define RC_ALGEBRA_COMMON_H
-
 /*******************************************************************************
 * rc_algebra_common.h
 *
 * all things shared between rc_vector.c, rc_matrix.c, and rc_linear_algebra.c
 *******************************************************************************/
 
-//#include "../roboticscape.h"
 
 #include <rc/other/preprocessor_macros.h>
 

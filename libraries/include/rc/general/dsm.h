@@ -1,5 +1,3 @@
-#ifndef RC_DSM_H
-#define RC_DSM_H
 /******************************************************************************
 * DSM2/DSMX RC radio functions
 *
@@ -59,6 +57,9 @@
 *
 * see rc_test_dsm, rc_calibrate_dsm, and rc_dsm_passthroguh examples
 ******************************************************************************/
+#ifndef RC_DSM_H
+#define RC_DSM_H
+
 int   rc_initialize_dsm();
 int   rc_stop_dsm_service();
 int   rc_get_dsm_ch_raw(int channel);

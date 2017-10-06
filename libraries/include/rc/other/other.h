@@ -1,6 +1,3 @@
-#ifndef RC_OTHER_H
-#define RC_OTHER_H
-
 /*******************************************************************************
 * Other Functions
 *
@@ -65,6 +62,10 @@
 *
 * Returns a string of the roboticscape package version for printing.
 *******************************************************************************/
+
+#ifndef RC_OTHER_H
+#define RC_OTHER_H
+
 void rc_null_func();
 float rc_get_random_float();
 double rc_get_random_double();

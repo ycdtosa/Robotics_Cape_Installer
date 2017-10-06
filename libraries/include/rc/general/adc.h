@@ -1,6 +1,3 @@
-#ifndef RC_ADC_H
-#define RC_ADC_H
-
 /******************************************************************************
 * ANALOG VOLTAGE SIGNALS
 *
@@ -33,6 +30,10 @@
 *
 * See the test_adc example for sample use case.
 ******************************************************************************/
+
+#ifndef RC_ADC_H
+#define RC_ADC_H
+
 float rc_battery_voltage();
 float rc_dc_jack_voltage();
 int   rc_adc_raw(int ch);

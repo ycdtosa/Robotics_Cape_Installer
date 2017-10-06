@@ -1,6 +1,3 @@
-#ifndef RC_RING_BUFFER_H
-#define RC_RING_BUFFER_H
-
 /*******************************************************************************
 * Ring Buffer
 *
@@ -9,7 +6,7 @@
 * suited for storing the last n values in a discrete time filter.
 *
 * The user creates their own instance of a buffer and passes a pointer to the
-* these ring_buf functions to perform normal operations. 
+* these ring_buf functions to perform normal operations.
 *
 * @ int rc_alloc_ringbuf(rc_ringbuf_t* buf, int size)
 *
@@ -38,15 +35,15 @@
 * Returns 0 on success or -1 on failure.
 *
 * @ int rc_insert_new_ringbuf_value(rc_ringbuf_t* buf, float val)
-* 
+*
 * Puts a new float into the ring buffer and updates the index accordingly.
 * If the buffer was full then the oldest value in the buffer is automatically
 * removed. Returns 0 on success or -1 on failure.
 *
 * @ float rc_get_ringbuf_value(rc_ringbuf_t* buf, int pos)
 *
-* Returns the float which is 'pos' steps behind the last value added to the 
-* buffer. If 'position' is given as 0 then the most recent value is returned. 
+* Returns the float which is 'pos' steps behind the last value added to the
+* buffer. If 'position' is given as 0 then the most recent value is returned.
 * Position 'pos' obviously can't be larger than the buffer size minus 1.
 * Prints an error message and return -1.0f on error.
 *
@@ -54,6 +51,9 @@
 *
 * Returns the standard deviation of the values in the ring buffer.
 *******************************************************************************/
+#ifndef RC_RING_BUFFER_H
+#define RC_RING_BUFFER_H
+
 typedef struct rc_ringbuf_t {
 	float* d;
 	int size;

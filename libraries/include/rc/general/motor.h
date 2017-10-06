@@ -1,6 +1,3 @@
-#ifndef RC_MOTOR_H
-#define RC_MOTOR_H
-
 /******************************************************************************
 * DC MOTOR CONTROL
 *
@@ -39,8 +36,13 @@
 *
 * See the test_motors example for sample use case.
 ******************************************************************************/
-int rc_enable_motors();
-int rc_disable_motors();
+#ifndef RC_MOTOR_H
+#define RC_MOTOR_H
+
+int rc_initialize_motors();
+int rc_cleanup_motors();
+int rc_enable_motor_standby();
+int rc_disable_motor_standby();
 int rc_set_motor(int motor, float duty);
 int rc_set_motor_all(float duty);
 int rc_set_motor_free_spin(int motor);

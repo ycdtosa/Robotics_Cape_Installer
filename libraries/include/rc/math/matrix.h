@@ -1,28 +1,15 @@
-#ifndef RC_MATRIX_H
-#define RC_MATRIX_H
-
-#include <rc/math/vector.h>
-
-// matrix type
-typedef struct rc_matrix_t{
-	int rows;
-	int cols;
-	float** d;
-	int initialized;
-} rc_matrix_t;
-
 /*******************************************************************************
 * Matrix
 *
 * @ int rc_alloc_matrix(rc_matrix_t* A, int rows, int cols)
 *
-* Allocates memory for matrix A to have new dimensions given by arguments rows 
+* Allocates memory for matrix A to have new dimensions given by arguments rows
 * and cols. If A is initially the right size, nothing is done and the data in A
 * is preserved. If A is uninitialized or of the wrong size then any existing
 * memory is freed and new memory is allocated, helping to prevent accidental
 * memory leaks. The contents of the new matrix is not guaranteed to be anything
 * in particular.
-* Returns 0 on success, otherwise -1. Will only be unsuccessful if 
+* Returns 0 on success, otherwise -1. Will only be unsuccessful if
 * rows&cols are invalid or there is insufficient memory available.
 *
 * @ int rc_free_matrix(rc_matrix_t* A)
@@ -39,14 +26,14 @@ typedef struct rc_matrix_t{
 * Returns an rc_matrix_t with no allocated memory and the initialized flag set
 * to 0. This is useful for initializing rc_matrix_t structs when they are
 * declared since local variables declared in a function without global variable
-* scope in C are not guaranteed to be zeroed out which can lead to bad memory 
+* scope in C are not guaranteed to be zeroed out which can lead to bad memory
 * pointers and segfaults if not handled carefully. We recommend initializing all
 * matrices with this before using rc_alloc_matrix or any other function.
 *
 * @ int rc_matrix_zeros(rc_matrix_t* A, int rows, int cols)
 *
 * Resizes matrix A and allocates memory for a matrix with specified rows &
-* columns. The new memory is pre-filled with zeros. Any existing memory 
+* columns. The new memory is pre-filled with zeros. Any existing memory
 * allocated for A is freed if necessary to avoid memory leaks.
 * Returns 0 on success or -1 on error.
 *
@@ -65,7 +52,7 @@ typedef struct rc_matrix_t{
 *
 * @ int rc_diag_matrix(rc_matrix_t* A, rc_vector_t v)
 *
-* Resizes A to be a square matrix with the same number of rows and columns as 
+* Resizes A to be a square matrix with the same number of rows and columns as
 * vector v's length. The diagonal entries of A are then populated with the
 * contents of v and the off-diagonal entries are set to 0. The original contents
 * of A are freed to avoid memory leaks.
@@ -89,10 +76,10 @@ typedef struct rc_matrix_t{
 *
 * However, we provide this function for completeness. It is not strictly
 * necessary for A to be provided as a pointer since a copy of the struct A
-* would also contain the correct pointer to the original matrix's allocated 
-* memory. However, in this library we use the convention of passing an 
-* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be 
-* modified by the function, and as a normal argument when it is only to be read 
+* would also contain the correct pointer to the original matrix's allocated
+* memory. However, in this library we use the convention of passing an
+* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be
+* modified by the function, and as a normal argument when it is only to be read
 * by the function. Returns 0 on success or -1 on error.
 *
 * @ float rc_get_matrix_entry(rc_matrix_t A, int row, int col)
@@ -116,22 +103,22 @@ typedef struct rc_matrix_t{
 * @ void rc_print_matrix_sci(rc_matrix_t A)
 *
 * Prints the contents of matrix A to stdout in scientific notation with 4
-* significant figures. Not recommended for very large matrices as rows will 
+* significant figures. Not recommended for very large matrices as rows will
 * typically linewrap if the terminal window is not wide enough.
 *
 * @ int rc_matrix_times_scalar(rc_matrix_t* A, float s)
 *
 * Multiplies every entry in A by scalar value s. It is not strictly
 * necessary for A to be provided as a pointer since a copy of the struct A
-* would also contain the correct pointer to the original matrix's allocated 
-* memory. However, in this library we use the convention of passing an 
-* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be 
-* modified by the function, and as a normal argument when it is only to be read 
+* would also contain the correct pointer to the original matrix's allocated
+* memory. However, in this library we use the convention of passing an
+* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be
+* modified by the function, and as a normal argument when it is only to be read
 * by the function. Returns 0 on success or -1 on failure.
 *
 * @ int rc_multiply_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C)
 *
-* Multiplies A*B=C. C is resized and its original contents are freed if 
+* Multiplies A*B=C. C is resized and its original contents are freed if
 * necessary to avoid memory leaks. Returns 0 on success or -1 on failure.
 *
 * @ int rc_left_multiply_matrix_inplace(rc_matrix_t A, rc_matrix_t* B)
@@ -169,6 +156,20 @@ typedef struct rc_matrix_t{
 * if you no longer have need for the original contents of matrix A.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
+
+#ifndef RC_MATRIX_H
+#define RC_MATRIX_H
+
+#include <rc/math/vector.h>
+
+// matrix type
+typedef struct rc_matrix_t{
+	int rows;
+	int cols;
+	float** d;
+	int initialized;
+} rc_matrix_t;
+
 int   rc_alloc_matrix(rc_matrix_t* A, int rows, int cols);
 int   rc_free_matrix(rc_matrix_t* A);
 rc_matrix_t rc_empty_matrix();
@@ -189,7 +190,6 @@ int   rc_add_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C);
 int   rc_add_matrices_inplace(rc_matrix_t* A, rc_matrix_t B);
 int   rc_matrix_transpose(rc_matrix_t A, rc_matrix_t* T);
 int   rc_matrix_transpose_inplace(rc_matrix_t* A);
-
 int   rc_vector_outer_product(rc_vector_t v1, rc_vector_t v2, rc_matrix_t* A);
 
 #endif // RC_MATRIX_H

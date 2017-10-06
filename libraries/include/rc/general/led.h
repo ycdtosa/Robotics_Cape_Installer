@@ -1,5 +1,3 @@
-#ifndef RC_LED_H
-#define RC_LED_H
 /*******************************************************************************
 * LEDs
 *
@@ -35,6 +33,9 @@
 *
 * See the blink example for sample use case of all of these functions.
 *******************************************************************************/
+#ifndef RC_LED_H
+#define RC_LED_H
+
 #ifndef ON
 #define ON 1
 #endif
@@ -48,6 +49,8 @@ typedef enum rc_led_t {
 	RED
 } rc_led_t;
 
+int rc_initialize_leds();
+int rc_cleanup_leds();
 int rc_set_led(rc_led_t led, int state);
 int rc_get_led(rc_led_t led);
 int rc_blink_led(rc_led_t led, float hz, float period);

@@ -1,8 +1,3 @@
-#ifndef RC_LINEAR_ALGEBRA_H
-#define RC_LINEAR_ALGEBRA_H
-
-#include <rc/math/matrix.h>
-
 /*******************************************************************************
 * Linear Algebra
 *
@@ -57,11 +52,11 @@
 * Thank you to Henry Guennadi Levkin for open sourcing this routine, it's
 * adapted here for RC use and includes better detection of unsolvable systems.
 * Returns 0 on success or -1 on failure.
-* 
+*
 * @ int rc_lin_system_solve_qr(rc_matrix_t A, rc_vector_t b, rc_vector_t* x)
 *
 * Finds a least-squares solution to the system Ax=b for non-square A using QR
-* decomposition method and places the solution in x. 
+* decomposition method and places the solution in x.
 * Returns 0 on success or -1 on failure.
 *
 * @ int rc_fit_ellipsoid(rc_matrix_t pts, rc_vector_t* ctr, rc_vector_t* lens)
@@ -70,7 +65,7 @@
 * fitted ellipsoid align with the global coordinate system. Therefore there are
 * 6 degrees of freedom defining the ellipsoid: the x,y,z coordinates of the
 * centroid and the lengths from the centroid to the surface in each of the 3
-* directions. 
+* directions.
 *
 * rc_matrix_t 'pts' is a tall matrix with 3 columns and at least 6 rows.
 * Each row must contain the x,y&z components of each individual point to be fit.
@@ -81,8 +76,13 @@
 * the lengths or radius from the centroid to the surface along each axis will
 * be placed in the vector 'lens'
 *
-* Returns 0 on success or -1 on failure. 
+* Returns 0 on success or -1 on failure.
 *******************************************************************************/
+#ifndef RC_LINEAR_ALGEBRA_H
+#define RC_LINEAR_ALGEBRA_H
+
+#include <rc/math/matrix.h>
+
 int   rc_matrix_times_col_vec(rc_matrix_t A, rc_vector_t v, rc_vector_t* c);
 int   rc_row_vec_times_matrix(rc_vector_t v, rc_matrix_t A, rc_vector_t* c);
 float rc_matrix_determinant(rc_matrix_t A);

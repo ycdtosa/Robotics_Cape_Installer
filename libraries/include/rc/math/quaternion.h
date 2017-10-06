@@ -1,9 +1,3 @@
-#ifndef RC_QUATERNION_H
-#define RC_QUATERNION_H
-
-#include <rc/math/vector.h>
-#include <rc/math/matrix.h>
-
 /*******************************************************************************
 * Quaternion Math
 *
@@ -25,14 +19,14 @@
 * @ int rc_normalize_quaternion_array(float q[4])
 *
 * Same as normalize_quaternion but performs the action on an array instead of
-* a rc_vector_t type. 
+* a rc_vector_t type.
 *
 * @ int rc_quaternion_to_tb(rc_vector_t q, rc_vector_t* tb)
 *
 * Populates vector tb with 321 Tait Bryan angles in array order XYZ with
 * operation order 321(yaw-Z, pitch-Y, roll-x). If tb is already allocated and of
-* length 3 then the new values are written in place, otherwise any existing 
-* memory is freed and a new vector of length 3 is allocated for tb. 
+* length 3 then the new values are written in place, otherwise any existing
+* memory is freed and a new vector of length 3 is allocated for tb.
 * Returns 0 on success or -1 on failure.
 *
 * @ void rc_quaternion_to_tb_array(float q[4], float tb[3])
@@ -41,7 +35,7 @@
 *
 * @ int rc_tb_to_quaternion(rc_vector_t tb, rc_vector_t* q)
 *
-* Populates quaternion vector q with the quaternion corresponding to the 
+* Populates quaternion vector q with the quaternion corresponding to the
 * tait-bryan pitch-roll-yaw values in vector tb. If q is already of length 4
 * then old contents are simply overwritten. Otherwise q'd existing memory is
 * freed and new memory is allocated to avoid memory leaks.
@@ -53,10 +47,10 @@
 *
 * @ int rc_quaternion_conjugate(rc_vector_t q, rc_vector_t* c)
 *
-* Populates quaternion vector c with the conjugate of quaternion q where the 3 
+* Populates quaternion vector c with the conjugate of quaternion q where the 3
 * imaginary parts ijk are multiplied by -1. If c is already of length 4 then the
 * old values are overwritten. Otherwise the old memory in c is freed and new
-* memory is allocated to help prevent memory leaks. 
+* memory is allocated to help prevent memory leaks.
 * Returns 0 on success or -1 on failure.
 *
 * @ int rc_quaternion_conjugate_inplace(rc_vector_t* q)
@@ -66,7 +60,7 @@
 *
 * @ void rc_quaternion_conjugate_array(float q[4], float c[4])
 *
-* Populates quaternion vector c with the conjugate of quaternion q where the 3 
+* Populates quaternion vector c with the conjugate of quaternion q where the 3
 * imaginary parts ijk are multiplied by -1.
 * Returns 0 on success or -1 on failure.
 *
@@ -85,9 +79,9 @@
 * @ int rc_quaternion_multiply(rc_vector_t a, rc_vector_t b, rc_vector_t* c)
 *
 * Calculates the quaternion Hamilton product ab=c and places the result in
-* vector argument c. If c is already of length 4 then the old values are 
+* vector argument c. If c is already of length 4 then the old values are
 * overwritten. Otherwise the old memory in c is freed and new memory is
-* allocated to help prevent memory leaks. 
+* allocated to help prevent memory leaks.
 * Returns 0 on success or -1 on failure.
 *
 * @ void rc_quaternion_multiply_array(float a[4], float b[4], float c[4])
@@ -96,23 +90,23 @@
 *
 * @ int rc_rotate_quaternion(rc_vector_t* p, rc_vector_t q)
 *
-* Rotates the quaternion p by quaternion q with the operation p'=qpq* 
+* Rotates the quaternion p by quaternion q with the operation p'=qpq*
 * Returns 0 on success or -1 on failure.
 *
 * @ void rc_rotate_quaternion_array(float p[4], float q[4])
 *
-* Rotates the quaternion p by quaternion q with the operation p'=qpq* 
+* Rotates the quaternion p by quaternion q with the operation p'=qpq*
 *
 * @ int rc_quaternion_rotate_vector(rc_vector_t* v, rc_vector_t q)
 *
 * Rotate a 3D vector v in-place about the origin by quaternion q by converting
-* v to a quaternion and performing the operation p'=qpq* 
+* v to a quaternion and performing the operation p'=qpq*
 * Returns 0 on success or -1 on failure.
 *
 * @ void rc_quaternion_rotate_vector_array(float v[3], float q[4])
 *
 * Rotate a 3D vector v in-place about the origin by quaternion q by converting
-* v to a quaternion and performing the operation p'=qpq* 
+* v to a quaternion and performing the operation p'=qpq*
 *
 * @ int rc_quaternion_to_rotation_matrix(rc_vector_t q, rc_matrix_t* m)
 *
@@ -122,6 +116,11 @@
 * and new memory is allocated.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
+#ifndef RC_QUATERNION_H
+#define RC_QUATERNION_H
+
+#include <rc/math/vector.h>
+#include <rc/math/matrix.h>
 
 float rc_quaternion_norm(rc_vector_t q);
 float rc_quaternion_norm_array(float q[4]);

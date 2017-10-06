@@ -1,20 +1,14 @@
-#ifndef RC_FILTER_H
-#define RC_FILTER_H
-
-#include <rc/math/vector.h>
-#include <rc/math/ring_buffer.h>
-
 /*******************************************************************************
 * Discrete SISO Filters
 *
-* This is a collection of functions for generating and implementing discrete 
-* SISO filters for arbitrary transfer functions. 
+* This is a collection of functions for generating and implementing discrete
+* SISO filters for arbitrary transfer functions.
 *
 * @ int rc_alloc_filter(rc_filter_t* f, rc_vector_t num, rc_vector_t den, float dt)
 *
 * Allocate memory for a discrete-time filter & populates it with the transfer
 * function coefficients provided in vectors num and den. The memory in num and
-* den is duplicated so those vectors can be reused or freed after allocating a 
+* den is duplicated so those vectors can be reused or freed after allocating a
 * filter without fear of disturbing the function of the filter. Argument dt is
 * the timestep in seconds at which the user expects to operate the filter.
 * The length of demonimator den must be at least as large as numerator num to
@@ -86,8 +80,8 @@
 * @ int enable_soft_start(rc_filter_t* filter, float seconds)
 *
 * Enables soft start functionality where the output bound is gradually opened
-* linearly from 0 to the normal saturation range. This occurs over the time 
-* specified from argument 'seconds' from when the filter is first created or 
+* linearly from 0 to the normal saturation range. This occurs over the time
+* specified from argument 'seconds' from when the filter is first created or
 * reset. Saturation must already be enabled for this to work. This assumes that
 * the user does indeed call rc_march_filter at roughly the same time interval
 * as the 'dt' variable in the filter struct which is set at creation time.
@@ -146,7 +140,7 @@
 * Returns 0 on success or -1 on failure.
 *
 * @ int rc_c2d_tustin(rc_filter_t* f,rc_vector_t num,rc_vector_t den,float dt,float w)
-* 
+*
 * Creates a discrete time filter with similar dynamics to a provided continuous
 * time transfer function using tustin's approximation with prewarping about a
 * frequency of interest 'w' in radians per second.
@@ -162,18 +156,18 @@
 *
 * @ int rc_first_order_lowpass(rc_filter_t* f, float dt, float time_constant)
 *
-* Creates a first order low pass filter. Any existing memory allocated for f is 
-* freed safely to avoid memory leaks and new memory is allocated for the new 
-* filter. dt is in units of seconds and time_constant is the number of seconds 
+* Creates a first order low pass filter. Any existing memory allocated for f is
+* freed safely to avoid memory leaks and new memory is allocated for the new
+* filter. dt is in units of seconds and time_constant is the number of seconds
 * it takes to rise to 63.4% of a steady-state input. This can be used alongside
 * rc_first_order_highpass to make a complementary filter pair.
 * Returns 0 on success or -1 on failure.
 *
 * @ int rc_first_order_highpass(rc_filter_t* f, float dt, float time_constant)
 *
-* Creates a first order high pass filter. Any existing memory allocated for f is 
-* freed safely to avoid memory leaks and new memory is allocated for the new 
-* filter. dt is in units of seconds and time_constant is the number of seconds 
+* Creates a first order high pass filter. Any existing memory allocated for f is
+* freed safely to avoid memory leaks and new memory is allocated for the new
+* filter. dt is in units of seconds and time_constant is the number of seconds
 * it takes to decay by 63.4% of a steady-state input. This can be used alongside
 * rc_first_order_lowpass to make a complementary filter pair.
 * Returns 0 on success or -1 on failure.
@@ -211,7 +205,7 @@
 *
 * @ int rc_double_integrator(rc_filter_t* f, float dt)
 *
-* Creates a second order double integrator. Like most functions here, the 
+* Creates a second order double integrator. Like most functions here, the
 * dynamics are only accurate if the filter is called with a timestep
 * corresponding to dt. Any existing memory allocated for f is freed safely to
 * avoid memory leaks and new memory is allocated for the new filter.
@@ -219,8 +213,8 @@
 *
 * @ int rc_pid_filter(rc_filter_t* f,float kp,float ki,float kd,float Tf,float dt)
 *
-* Creates a discrete-time implementation of a parallel PID controller with 
-* high-frequency rolloff. This is equivalent to the Matlab function: 
+* Creates a discrete-time implementation of a parallel PID controller with
+* high-frequency rolloff. This is equivalent to the Matlab function:
 * C = pid(Kp,Ki,Kd,Tf,Ts)
 *
 * We cannot implement a pure differentiator with a discrete transfer function
@@ -228,13 +222,19 @@
 * results in less rolloff, but Tf must be greater than dt/2 for stability.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
+#ifndef RC_FILTER_H
+#define RC_FILTER_H
+
+#include <rc/math/vector.h>
+#include <rc/math/ring_buffer.h>
+
 typedef struct rc_filter_t{
 	// transfer function properties
 	int order;			// transfer function order
 	float dt;			// timestep in seconds
 	float gain;			// gain usually 1.0
-	rc_vector_t num;	// numerator coefficients 
-	rc_vector_t den;	// denominator coefficients 
+	rc_vector_t num;	// numerator coefficients
+	rc_vector_t den;	// denominator coefficients
 	// saturation settings
 	int sat_en;			// set to 1 by enable_saturation()
 	float sat_min;		// lower saturation limit

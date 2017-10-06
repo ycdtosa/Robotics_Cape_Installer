@@ -1,8 +1,3 @@
-#ifndef RC_POLYNOMIAL_H
-#define RC_POLYNOMIAL_H
-
-#include <rc/math/vector.h>
-
 /*******************************************************************************
 * polynomial Manipulation
 *
@@ -70,6 +65,11 @@
 * of order N and cutoff wc (rad/s) and places them in vector b.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
+#ifndef RC_POLYNOMIAL_H
+#define RC_POLYNOMIAL_H
+
+#include <rc/math/vector.h>
+
 int rc_print_poly(rc_vector_t v);
 int rc_poly_conv(rc_vector_t a, rc_vector_t b, rc_vector_t* c);
 int rc_poly_power(rc_vector_t a, int n, rc_vector_t* b);
