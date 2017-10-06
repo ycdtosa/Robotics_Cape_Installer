@@ -52,6 +52,8 @@
 #ifndef RC_I2C_H
 #define RC_I2C_H
 
+#include <stdint.h>
+
 int rc_i2c_init(int bus, uint8_t devAddr);
 int rc_i2c_close(int bus);
 int rc_i2c_set_device_address(int bus, uint8_t devAddr);

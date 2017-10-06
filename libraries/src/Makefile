@@ -3,7 +3,6 @@ TARGET = libroboticscape.so
 SUBDIRS		:=$(shell find * -type d -print)
 CC		:= gcc
 LINKER		:= gcc
-#TOUCH		:= $(shell touch *)
 CWARNINGS	:= -Wall -Wextra
 # achitecture flags enables the NEON hardware SIMD floating point unit
 ARCFLAGS	:= -mfpu=neon -mfloat-abi=hard -march=armv7-a -mtune=cortex-a8
@@ -11,10 +10,12 @@ ARCFLAGS	:= -mfpu=neon -mfloat-abi=hard -march=armv7-a -mtune=cortex-a8
 FFLAGS		:= -O3 -ffast-math -ftree-vectorize
 CFLAGS		:= -c -fPIC
 LFLAGS		:= -lm -lrt -lpthread -shared -Wl,-soname,$(TARGET)
+IFLAGS		:= -I../include
 
 SOURCES		:= $(shell find ./ -name '*.c')
 INCLUDES	:= $(shell find ./ -name '*.h')
-OBJECTS		:= $(shell find ./ -name '*.o')
+OBJECTS		:= $(SOURCES:.c=.o)
+#OBJECTS		:= $(shell find ./ -name '*.o')
 
 prefix		:= /usr
 RM		:= rm -f -r
@@ -25,14 +26,14 @@ LIBDIR		:= ../lib
 
 
 # linking Objects
-$(TARGET):
+$(TARGET): $(OBJECTS)
 	$(LINKER) $(LFLAGS) -o $(LIBDIR)/$(TARGET) $(OBJECTS)
 	@echo " "
 	@echo "Linked $(TARGET)"
 	@echo " "
 
 $(OBJECTS): %.o : %.c $(INCLUDES)
-	@$(CC) $(CFLAGS) $(CWARNINGS) $(FFLAGS) $(ARCFLAGS) $(DEBUGFLAG) $(DEFS) -c $< -o $(@)
+	@$(CC) $(CFLAGS) $(IFLAGS) $(CWARNINGS) $(FFLAGS) $(ARCFLAGS) $(DEBUGFLAG) $(DEFS) -c $< -o $(@)
 	@echo "Compiled: "$<
 
 all:

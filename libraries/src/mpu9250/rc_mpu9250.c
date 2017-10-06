@@ -6,12 +6,22 @@
 * Credit to Kris Winer most of the framework and register definitions.
 *******************************************************************************/
 #define _GNU_SOURCE
-#include "../rc_defs.h"
-#include "../roboticscape.h"
-#include "../preprocessor_macros.h"
-#include "mpu9250_defs.h"
-#include "dmp_firmware.h"
-#include "dmpKey.h"
+#include "rc/general/state.h"
+#include "rc/bbb/rc_defs.h"
+#include "rc/sensor/mpu9250.h"
+#include "rc/other/preprocessor_macros.h"
+#include "rc/sensor/mpu9250_defs.h"
+#include "rc/sensor/dmp_firmware.h"
+#include "rc/sensor/dmpKey.h"
+#include "rc/math/vector.h"
+#include "rc/math/matrix.h"
+#include "rc/math/quaternion.h"
+#include "rc/math/filter.h"
+#include "rc/math/linear_algebra.h"
+#include "rc/other/time.h"
+#include "rc/other/other.h"
+#include "rc/io/gpio.h"
+#include "rc/io/i2c.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -20,17 +30,17 @@
 #include <unistd.h>
 #include <poll.h>
 #include <sys/stat.h>
-#include <sys/types.h>
+#include <stdint.h>
 #include <errno.h>
 
 // macros
 #define ARRAY_SIZE(array) sizeof(array)/sizeof(array[0])
 #define min(a, b)	((a < b) ? a : b)
 
-#define DEG_TO_RAD		0.0174532925199
-#define RAD_TO_DEG		57.295779513
-#define PI				M_PI
-#define TWO_PI			(2.0 * M_PI)
+#define DEG_TO_RAD	0.0174532925199
+#define RAD_TO_DEG	57.295779513
+#define PI		M_PI
+#define TWO_PI		(2.0 * M_PI)
 
 // there should be 28 or 35 bytes in the FIFO if the magnetometer is disabled
 // or enabled.
@@ -38,22 +48,22 @@
 #define FIFO_LEN_MAG	35
 
 // error threshold checks
-#define QUAT_ERROR_THRESH		(1L<<16) // very precise threshold
+#define QUAT_ERROR_THRESH	(1L<<16) // very precise threshold
 #define QUAT_MAG_SQ_NORMALIZED	(1L<<28)
-#define QUAT_MAG_SQ_MIN			(QUAT_MAG_SQ_NORMALIZED - QUAT_ERROR_THRESH)
-#define QUAT_MAG_SQ_MAX			(QUAT_MAG_SQ_NORMALIZED + QUAT_ERROR_THRESH)
-#define GYRO_CAL_THRESH			50
-#define GYRO_OFFSET_THRESH		500
+#define QUAT_MAG_SQ_MIN		(QUAT_MAG_SQ_NORMALIZED - QUAT_ERROR_THRESH)
+#define QUAT_MAG_SQ_MAX		(QUAT_MAG_SQ_NORMALIZED + QUAT_ERROR_THRESH)
+#define GYRO_CAL_THRESH		50
+#define GYRO_OFFSET_THRESH	500
 
 // Thread control
-pthread_mutex_t rc_imu_read_mutex     = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t  rc_imu_read_condition = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t rc_imu_read_mutex	= PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  rc_imu_read_condition	= PTHREAD_COND_INITIALIZER;
 
 /*******************************************************************************
 *	Local variables
 *******************************************************************************/
 rc_imu_config_t config;
-int bypass_en;  
+int bypass_en;
 int dmp_en;
 int packet_len;
 pthread_t imu_interrupt_thread;
@@ -114,14 +124,14 @@ int data_fusion(rc_imu_data_t* data);
 *******************************************************************************/
 rc_imu_config_t rc_default_imu_config(){
 	rc_imu_config_t conf;
-	
+
 	// general stuff
 	conf.accel_fsr	= A_FSR_4G;
 	conf.gyro_fsr	= G_FSR_1000DPS;
 	conf.gyro_dlpf	= GYRO_DLPF_92;
 	conf.accel_dlpf	= ACCEL_DLPF_92;
 	conf.enable_magnetometer = 0;
-	
+
 	// DMP stuff
 	conf.enable_dmp = 0;
 	conf.dmp_sample_rate = 100;
@@ -147,36 +157,36 @@ int rc_set_imu_config_to_defaults(rc_imu_config_t *conf){
 *
 * Set up the imu for one-shot sampling of sensor data by user
 *******************************************************************************/
-int rc_initialize_imu(rc_imu_data_t *data, rc_imu_config_t conf){  
+int rc_initialize_imu(rc_imu_data_t *data, rc_imu_config_t conf){
 	uint8_t c;
-	
+
 	// make sure the bus is not currently in use by another thread
 	// do not proceed to prevent interfering with that process
 	if(rc_i2c_get_in_use_state(IMU_BUS)){
 		printf("i2c bus claimed by another process\n");
 		printf("Continuing with rc_initialize_imu() anyway.\n");
 	}
-	
+
 	// if it is not claimed, start the i2c bus
 	if(rc_i2c_init(IMU_BUS, IMU_ADDR)<0){
 		fprintf(stderr,"failed to initialize i2c bus\n");
 		return -1;
 	}
-	// claiming the bus does no guarantee other code will not interfere 
+	// claiming the bus does no guarantee other code will not interfere
 	// with this process, but best to claim it so other code can check
 	// like we did above
 	rc_i2c_claim_bus(IMU_BUS);
-	
+
 	// update local copy of config struct with new values
 	config=conf;
-	
+
 	// restart the device so we start with clean registers
 	if(reset_mpu9250()<0){
 		fprintf(stderr,"ERROR: failed to reset_mpu9250\n");
 		rc_i2c_release_bus(IMU_BUS);
 		return -1;
 	}
-	
+
 	//check the who am i register to make sure the chip is alive
 	if(rc_i2c_read_byte(IMU_BUS, WHO_AM_I_MPU9250, &c)<0){
 		fprintf(stderr,"Reading WHO_AM_I_MPU9250 register failed\n");
@@ -189,14 +199,14 @@ int rc_initialize_imu(rc_imu_data_t *data, rc_imu_config_t conf){
 		rc_i2c_release_bus(IMU_BUS);
 		return -1;
 	}
- 
+
 	// load in gyro calibration offsets from disk
 	if(load_gyro_offets()<0){
 		fprintf(stderr,"ERROR: failed to load gyro calibration offsets\n");
 		rc_i2c_release_bus(IMU_BUS);
 		return -1;
 	}
-	
+
 	// Set sample rate = 1000/(1 + SMPLRT_DIV)
 	// here we use a divider of 0 for 1khz sample
 	if(rc_i2c_write_byte(IMU_BUS, SMPLRT_DIV, 0x00)){
@@ -204,7 +214,7 @@ int rc_initialize_imu(rc_imu_data_t *data, rc_imu_config_t conf){
 		rc_i2c_release_bus(IMU_BUS);
 		return -1;
 	}
-	
+
 	// set full scale ranges and filter constants
 	if(set_gyro_fsr(conf.gyro_fsr, data)){
 		fprintf(stderr,"failed to set gyro fsr\n");
@@ -226,7 +236,7 @@ int rc_initialize_imu(rc_imu_data_t *data, rc_imu_config_t conf){
 		rc_i2c_release_bus(IMU_BUS);
 		return -1;
 	}
-	
+
 	// initialize the magnetometer too if requested in config
 	if(conf.enable_magnetometer){
 		if(initialize_magnetometer()){
@@ -236,7 +246,7 @@ int rc_initialize_imu(rc_imu_data_t *data, rc_imu_config_t conf){
 		}
 	}
 	else power_down_magnetometer();
-	
+
 	// all done!!
 	rc_i2c_release_bus(IMU_BUS);
 	return 0;
@@ -244,13 +254,13 @@ int rc_initialize_imu(rc_imu_data_t *data, rc_imu_config_t conf){
 
 /*******************************************************************************
 * int rc_read_accel_data(rc_imu_data_t* data)
-* 
-* Always reads in latest accelerometer values. The sensor 
+*
+* Always reads in latest accelerometer values. The sensor
 * self-samples at 1khz and this retrieves the latest data.
 *******************************************************************************/
 int rc_read_accel_data(rc_imu_data_t *data){
 	// new register data stored here
-	uint8_t raw[6];  
+	uint8_t raw[6];
 	// set the device address
 	rc_i2c_set_device_address(IMU_BUS, IMU_ADDR);
 	 // Read the six raw data registers into data array
@@ -313,7 +323,7 @@ int rc_read_mag_data(rc_imu_data_t* data){
 	}
 	// magnetometer is actually a separate device with its
 	// own address inside the mpu9250
-	// MPU9250 was put into passthrough mode 
+	// MPU9250 was put into passthrough mode
 	rc_i2c_set_device_address(IMU_BUS, AK8963_ADDR);
 	// read the data ready bit to see if there is new data
 	if(rc_i2c_read_byte(IMU_BUS, AK8963_ST1, &st1)<0){
@@ -323,13 +333,13 @@ int rc_read_mag_data(rc_imu_data_t* data){
 	#ifdef DEBUG
 	printf("st1: %d", st1);
 	#endif
-	if(!(st1&MAG_DATA_READY)){ 
+	if(!(st1&MAG_DATA_READY)){
 		#ifdef DEBUG
 		printf("no new data\n");
 		#endif
 		return 0;
 	}
-	// Read the six raw data regs into data array	
+	// Read the six raw data regs into data array
 	if(rc_i2c_read_bytes(IMU_BUS,AK8963_XOUT_L,7,&raw[0])<0){
 		printf("rc_read_mag_data failed\n");
 		return -1;
@@ -342,15 +352,15 @@ int rc_read_mag_data(rc_imu_data_t* data){
 	}
 	// Turn the MSB and LSB into a signed 16-bit value
 	// Data stored as little Endian
-	adc[0] = (int16_t)(((int16_t)raw[1]<<8) | raw[0]);  
-	adc[1] = (int16_t)(((int16_t)raw[3]<<8) | raw[2]);  
-	adc[2] = (int16_t)(((int16_t)raw[5]<<8) | raw[4]); 
+	adc[0] = (int16_t)(((int16_t)raw[1]<<8) | raw[0]);
+	adc[1] = (int16_t)(((int16_t)raw[3]<<8) | raw[2]);
+	adc[2] = (int16_t)(((int16_t)raw[5]<<8) | raw[4]);
 	#ifdef DEBUG
 	printf("raw mag:%d %d %d\n", adc[0], adc[1], adc[2]);
 	#endif
 
 	// multiply by the sensitivity adjustment and convert to units of uT micro
-	// Teslas. Also correct the coordinate system as someone in invensense 
+	// Teslas. Also correct the coordinate system as someone in invensense
 	// thought it would be bright idea to have the magnetometer coordiate
 	// system aligned differently than the accelerometer and gyro.... -__-
 	factory_cal_data[0] = adc[1] * mag_factory_adjust[1] * MAG_RAW_TO_uT;
@@ -372,7 +382,7 @@ int rc_read_mag_data(rc_imu_data_t* data){
 /*******************************************************************************
 * int rc_read_imu_temp(rc_imu_data_t* data)
 *
-* reads the latest temperature of the imu. 
+* reads the latest temperature of the imu.
 *******************************************************************************/
 int rc_read_imu_temp(rc_imu_data_t* data){
 	uint16_t adc;
@@ -387,7 +397,7 @@ int rc_read_imu_temp(rc_imu_data_t* data){
 	data->temp = 21.0 + adc/TEMP_SENSITIVITY;
 	return 0;
 }
- 
+
 /*******************************************************************************
 * int reset_mpu9250()
 *
@@ -424,7 +434,7 @@ int reset_mpu9250(){
 
 /*******************************************************************************
 * int set_gyro_fsr(rc_gyro_fsr_t fsr, rc_imu_data_t* data)
-* 
+*
 * set gyro full scale range and update conversion ratio
 *******************************************************************************/
 int set_gyro_fsr(rc_gyro_fsr_t fsr, rc_imu_data_t* data){
@@ -455,7 +465,7 @@ int set_gyro_fsr(rc_gyro_fsr_t fsr, rc_imu_data_t* data){
 
 /*******************************************************************************
 * int set_accel_fsr(rc_accel_fsr_t fsr, rc_imu_data_t* data)
-* 
+*
 * set accelerometer full scale range and update conversion ratio
 *******************************************************************************/
 int set_accel_fsr(rc_accel_fsr_t fsr, rc_imu_data_t* data){
@@ -490,7 +500,7 @@ int set_accel_fsr(rc_accel_fsr_t fsr, rc_imu_data_t* data){
 * Set GYRO low pass filter constants. This is the same register as
 * the fifo overflow mode so we set it to keep the newest data too.
 *******************************************************************************/
-int set_gyro_dlpf(rc_gyro_dlpf_t dlpf){ 
+int set_gyro_dlpf(rc_gyro_dlpf_t dlpf){
 	uint8_t c = FIFO_MODE_REPLACE_OLD;
 	switch(dlpf){
 	case GYRO_DLPF_OFF:
@@ -518,7 +528,7 @@ int set_gyro_dlpf(rc_gyro_dlpf_t dlpf){
 		fprintf(stderr,"invalid gyro_dlpf\n");
 		return -1;
 	}
-	return rc_i2c_write_byte(IMU_BUS, CONFIG, c); 
+	return rc_i2c_write_byte(IMU_BUS, CONFIG, c);
 }
 
 /*******************************************************************************
@@ -566,7 +576,7 @@ int set_accel_dlpf(rc_accel_dlpf_t dlpf){
 *******************************************************************************/
 int initialize_magnetometer(){
 	uint8_t raw[3];  // calibration data stored here
-	
+
 	rc_i2c_set_device_address(IMU_BUS, IMU_ADDR);
 	// Enable i2c bypass to allow talking to magnetometer
 	if(mpu_set_bypass(1)){
@@ -576,11 +586,11 @@ int initialize_magnetometer(){
 	// magnetometer is actually a separate device with its
 	// own address inside the mpu9250
 	rc_i2c_set_device_address(IMU_BUS, AK8963_ADDR);
-	// Power down magnetometer  
-	rc_i2c_write_byte(IMU_BUS, AK8963_CNTL, MAG_POWER_DN); 
+	// Power down magnetometer
+	rc_i2c_write_byte(IMU_BUS, AK8963_CNTL, MAG_POWER_DN);
 	rc_usleep(1000);
 	// Enter Fuse ROM access mode
-	rc_i2c_write_byte(IMU_BUS, AK8963_CNTL, MAG_FUSE_ROM); 
+	rc_i2c_write_byte(IMU_BUS, AK8963_CNTL, MAG_FUSE_ROM);
 	rc_usleep(1000);
 	// Read the xyz sensitivity adjustment values
 	if(rc_i2c_read_bytes(IMU_BUS, AK8963_ASAX, 3, &raw[0])<0){
@@ -590,13 +600,13 @@ int initialize_magnetometer(){
 		return -1;
 	}
 	// Return sensitivity adjustment values
-	mag_factory_adjust[0] = (raw[0]-128)/256.0 + 1.0;   
-	mag_factory_adjust[1] = (raw[1]-128)/256.0 + 1.0;  
-	mag_factory_adjust[2] = (raw[2]-128)/256.0 + 1.0; 
+	mag_factory_adjust[0] = (raw[0]-128)/256.0 + 1.0;
+	mag_factory_adjust[1] = (raw[1]-128)/256.0 + 1.0;
+	mag_factory_adjust[2] = (raw[2]-128)/256.0 + 1.0;
 	// Power down magnetometer again
-	rc_i2c_write_byte(IMU_BUS, AK8963_CNTL, MAG_POWER_DN); 
+	rc_i2c_write_byte(IMU_BUS, AK8963_CNTL, MAG_POWER_DN);
 	rc_usleep(100);
-	// Configure the magnetometer for 16 bit resolution 
+	// Configure the magnetometer for 16 bit resolution
 	// and continuous sampling mode 2 (100hz)
 	uint8_t c = MSCALE_16|MAG_CONT_MES_2;
 	rc_i2c_write_byte(IMU_BUS, AK8963_CNTL, c);
@@ -623,7 +633,7 @@ int power_down_magnetometer(){
 	// magnetometer is actually a separate device with its
 	// own address inside the mpu9250
 	rc_i2c_set_device_address(IMU_BUS, AK8963_ADDR);
-	// Power down magnetometer  
+	// Power down magnetometer
 	if(rc_i2c_write_byte(IMU_BUS, AK8963_CNTL, MAG_POWER_DN)<0){
 		fprintf(stderr,"failed to write to magnetometer\n");
 		return -1;
@@ -724,7 +734,7 @@ int rc_initialize_imu_dmp(rc_imu_data_t *data, rc_imu_config_t conf){
 		fprintf(stderr,"ERROR: failed to configure GPIO %d", IMU_INTERRUPT_PIN);
 		return -1;
 	}
-	// claiming the bus does no guarantee other code will not interfere 
+	// claiming the bus does no guarantee other code will not interfere
 	// with this process, but best to claim it so other code can check
 	// like we did above
 	rc_i2c_claim_bus(IMU_BUS);
@@ -817,7 +827,7 @@ int rc_initialize_imu_dmp(rc_imu_data_t *data, rc_imu_config_t conf){
 	// set up the IMU to put magnetometer data in the fifo too if enabled
 	if(conf.enable_magnetometer){
 		// enable slave 0 (mag) in fifo
-		rc_i2c_write_byte(IMU_BUS,FIFO_EN, FIFO_SLV0_EN);	
+		rc_i2c_write_byte(IMU_BUS,FIFO_EN, FIFO_SLV0_EN);
 		// enable master, and clock speed
 		rc_i2c_write_byte(IMU_BUS,I2C_MST_CTRL,	0x8D);
 		// set slave 0 address to magnetometer address
@@ -1036,7 +1046,7 @@ int dmp_set_fifo_rate(unsigned short rate){
 
 /*******************************************************************************
 * int mpu_set_bypass(unsigned char bypass_on)
-* 
+*
 * configures the USER_CTRL and INT_PIN_CFG registers to turn on and off the
 * i2c bypass mode for talking to the magnetometer. In random read mode this
 * is used to turn on the bypass and left as is. In DMP mode bypass is turned
@@ -1080,7 +1090,7 @@ int mpu_set_bypass(uint8_t bypass_on){
 * int dmp_enable_feature(unsigned short mask)
 *
 * This is mostly taken from the Invensense DMP code and serves to turn on and
-* off DMP features based on the feature mask. We modified to remove some 
+* off DMP features based on the feature mask. We modified to remove some
 * irrelevant features and set our own fifo-length variable. This probably
 * isn't necessary to remain in its current form as rc_initialize_imu_dmp uses
 * a fixed set of features but we keep it as is since it works fine.
@@ -1252,12 +1262,12 @@ int dmp_enable_lp_quat(unsigned char enable){
 *
 * This is mostly from the Invensense open source codebase but modified to also
 * allow magnetometer data to come in through the FIFO. This just turns off the
-* interrupt, resets fifo and DMP, then starts them again. Used once while 
+* interrupt, resets fifo and DMP, then starts them again. Used once while
 * initializing (probably no necessary) then again if the fifo gets too full.
 *******************************************************************************/
 int mpu_reset_fifo(void){
 	uint8_t data;
-	// make sure the i2c address is set correctly. 
+	// make sure the i2c address is set correctly.
 	// this shouldn't take any time at all if already set
 	rc_i2c_set_device_address(IMU_BUS, IMU_ADDR);
 	data = 0;
@@ -1291,7 +1301,7 @@ int mpu_reset_fifo(void){
 
 /*******************************************************************************
 * int dmp_set_interrupt_mode(unsigned char mode)
-* 
+*
 * This is from the Invensense open source DMP code. It configures the DMP
 * to trigger an interrupt either every sample or only on gestures. Here we
 * only ever configure for continuous sampling.
@@ -1313,7 +1323,7 @@ int dmp_set_interrupt_mode(unsigned char mode){
 
 /*******************************************************************************
 * int set_int_enable(unsigned char enable)
-* 
+*
 * This is a vestige of the invensense mpu open source code and is probably
 * not necessary but remains here anyway.
 *******************************************************************************/
@@ -1361,9 +1371,9 @@ int mpu_set_sample_rate(int rate){
 
 /*******************************************************************************
 *  int mpu_set_dmp_state(unsigned char enable)
-* 
+*
 * This turns on and off the DMP interrupt and resets the FIFO. This probably
-* isn't necessary as rc_initialize_imu_dmp sets these registers but it remains 
+* isn't necessary as rc_initialize_imu_dmp sets these registers but it remains
 * here as a vestige of the invensense open source dmp code.
 *******************************************************************************/
 int mpu_set_dmp_state(unsigned char enable){
@@ -1391,12 +1401,12 @@ int mpu_set_dmp_state(unsigned char enable){
 /*******************************************************************************
 * void* imu_interrupt_handler(void* ptr)
 *
-* Here is where the magic happens. This function runs as its own thread and 
-* monitors the gpio pin IMU_INTERRUPT_PIN with the blocking function call 
+* Here is where the magic happens. This function runs as its own thread and
+* monitors the gpio pin IMU_INTERRUPT_PIN with the blocking function call
 * poll(). If a valid interrupt is received from the IMU then mark the timestamp,
 * read in the IMU data, and call the user-defined interrupt function if set.
 *******************************************************************************/
-void* imu_interrupt_handler( __unused void* ptr){ 
+void* imu_interrupt_handler( __unused void* ptr){
 	struct pollfd fdset[1];
 	int ret;
 	char buf[64];
@@ -1413,12 +1423,12 @@ void* imu_interrupt_handler( __unused void* ptr){
 	mpu_reset_fifo();
 	while(rc_get_state()!=EXITING && shutdown_interrupt_thread!=1) {
 		// system hangs here until IMU FIFO interrupt
-		poll(fdset, 1, IMU_POLL_TIMEOUT); 
+		poll(fdset, 1, IMU_POLL_TIMEOUT);
 		if(rc_get_state()==EXITING || shutdown_interrupt_thread==1){
 			break;
 		}
 		else if (fdset[0].revents & POLLPRI) {
-			lseek(fdset[0].fd, 0, SEEK_SET);  
+			lseek(fdset[0].fd, 0, SEEK_SET);
 			read(fdset[0].fd, buf, 64);
 			// interrupt received, mark the timestamp
 			last_interrupt_timestamp_nanos = rc_nanos_since_epoch();
@@ -1442,7 +1452,7 @@ void* imu_interrupt_handler( __unused void* ptr){
 				// signals that a measurement is available
 				pthread_cond_broadcast(&rc_imu_read_condition);
 				// then run user interrupt function if it's set
-				imu_interrupt_func(); 
+				imu_interrupt_func();
 			}
 			// release mutex
 			pthread_mutex_unlock(&rc_imu_read_mutex);
@@ -1462,7 +1472,7 @@ void* imu_interrupt_handler( __unused void* ptr){
 /*******************************************************************************
 * int rc_wait_for_dmp()
 *
-* This is a blocking function that returns 0 when new DMP data is ready. 
+* This is a blocking function that returns 0 when new DMP data is ready.
 * Returns -1 if called when the imu is being shut down or -2 if called when the
 * dmp is not enabled.
 *******************************************************************************/
@@ -1510,7 +1520,7 @@ int rc_stop_imu_interrupt_func(){
 /*******************************************************************************
 * int read_dmp_fifo(rc_imu_data_t* data)
 *
-* Reads the FIFO buffer and populates the data struct. Here is where we see 
+* Reads the FIFO buffer and populates the data struct. Here is where we see
 * bad/empty/double packets due to i2c bus errors and the IMU failing to have
 * data ready in time. enabling warnings in the config struct will let this
 * function print out warnings when these conditions are detected. If write
@@ -1528,7 +1538,7 @@ int read_dmp_fifo(rc_imu_data_t* data){
 	float factory_cal_data[3]; // just temp holder for mag data
 	double q_tmp[4];
 	double sum,qlen;
-	
+
 	if(!dmp_en){
 		printf("only use mpu_read_fifo in dmp mode\n");
 		return -1;
@@ -1540,8 +1550,8 @@ int read_dmp_fifo(rc_imu_data_t* data){
 		fprintf(stderr,"ERROR: packet_len is set incorrectly for read_dmp_fifo\n");
 		return -1;
 	}
-	
-	// make sure the i2c address is set correctly. 
+
+	// make sure the i2c address is set correctly.
 	// this shouldn't take any time at all if already set
 	rc_i2c_set_device_address(IMU_BUS, IMU_ADDR);
 	int is_new_dmp_data = 0;
@@ -1581,7 +1591,7 @@ int read_dmp_fifo(rc_imu_data_t* data){
 		goto READ_FIFO;
 	}
 
-	// these numbers pop up under high stress and represent uneven 
+	// these numbers pop up under high stress and represent uneven
 	// combinations of magnetometer and DMP data
 	if(fifo_count==42){
 		if(config.show_warnings&& first_run!=1){
@@ -1670,7 +1680,7 @@ READ_FIFO:
 		return -1;
 	}
 
-	// if dmp data is available we must figure out if it's before or 
+	// if dmp data is available we must figure out if it's before or
 	// after the magnetometer data. Usually before.
 	if(dmp_data_available){
 		if(config.enable_magnetometer && check_quaternion_validity(raw,i+7)){
@@ -1699,7 +1709,7 @@ READ_FIFO:
 			((long)raw[j+10] << 8) | raw[j+11];
 		quat[3] = ((long)raw[j+12] << 24) | ((long)raw[j+13] << 16) |
 			((long)raw[j+14] << 8) | raw[j+15];
-		
+
 		// do double-precision quaternion normalization since the numbers
 		// in raw format are huge
 		for(i=0;i<4;i++) q_tmp[i]=(double)quat[i];
@@ -1712,21 +1722,21 @@ READ_FIFO:
 
 		// fill in tait-bryan angles to the data struct
 		rc_quaternion_to_tb_array(data->dmp_quat, data->dmp_TaitBryan);
-		
+
 		j+=16; // increase offset by 16 which was the quaternion size
-		
+
 		// Read Accel values and load into imu_data struct
 		// Turn the MSB and LSB into a signed 16-bit value
 		data->raw_accel[0] = (int16_t)(((uint16_t)raw[j+0]<<8)|raw[j+1]);
 		data->raw_accel[1] = (int16_t)(((uint16_t)raw[j+2]<<8)|raw[j+3]);
 		data->raw_accel[2] = (int16_t)(((uint16_t)raw[j+4]<<8)|raw[j+5]);
-		
+
 		// Fill in real unit values
 		data->accel[0] = data->raw_accel[0] * data->accel_to_ms2;
 		data->accel[1] = data->raw_accel[1] * data->accel_to_ms2;
 		data->accel[2] = data->raw_accel[2] * data->accel_to_ms2;
 		j+=6;
-		
+
 		// Read gyro values and load into imu_data struct
 		// Turn the MSB and LSB into a signed 16-bit value
 		data->raw_gyro[0] = (int16_t)(((int16_t)raw[0+j]<<8)|raw[1+j]);
@@ -1744,26 +1754,26 @@ READ_FIFO:
 	if(mag_data_available){
 		// Turn the MSB and LSB into a signed 16-bit value
 		// Data stored as little Endian
-		mag_adc[0] = (int16_t)(((int16_t)raw[i+1]<<8) | raw[i+0]);  
-		mag_adc[1] = (int16_t)(((int16_t)raw[i+3]<<8) | raw[i+2]);  
-		mag_adc[2] = (int16_t)(((int16_t)raw[i+5]<<8) | raw[i+4]); 
-		
+		mag_adc[0] = (int16_t)(((int16_t)raw[i+1]<<8) | raw[i+0]);
+		mag_adc[1] = (int16_t)(((int16_t)raw[i+3]<<8) | raw[i+2]);
+		mag_adc[2] = (int16_t)(((int16_t)raw[i+5]<<8) | raw[i+4]);
+
 		// if the data is non-zero, save it
-		// multiply by the sensitivity adjustment and convert to units of 
-		// uT micro Teslas. Also correct the coordinate system as someone 
-		// in invensense thought it would be bright idea to have the 
-		// magnetometer coordiate system aligned differently than the 
+		// multiply by the sensitivity adjustment and convert to units of
+		// uT micro Teslas. Also correct the coordinate system as someone
+		// in invensense thought it would be bright idea to have the
+		// magnetometer coordiate system aligned differently than the
 		// accelerometer and gyro.... -__-
 		if(mag_adc[0]!=0 || mag_adc[1]!=0 || mag_adc[2]!=0){
 			// multiply by the sensitivity adjustment and convert to units of uT
-			// Also correct the coordinate system as someone in invensense 
+			// Also correct the coordinate system as someone in invensense
 			// thought it would be a bright idea to have the magnetometer coordiate
 			// system aligned differently than the accelerometer and gyro.... -__-
 			factory_cal_data[0] = mag_adc[1]*mag_factory_adjust[1] * MAG_RAW_TO_uT;
 			factory_cal_data[1] = mag_adc[0]*mag_factory_adjust[0] * MAG_RAW_TO_uT;
 			factory_cal_data[2] = -mag_adc[2]*mag_factory_adjust[2] * MAG_RAW_TO_uT;
-		
-			// now apply out own calibration, but first make sure we don't 
+
+			// now apply out own calibration, but first make sure we don't
 			// accidentally multiply by zero in case of uninitialized scale factors
 			if(mag_scales[0]==0.0) mag_scales[0]=1.0;
 			if(mag_scales[1]==0.0) mag_scales[1]=1.0;
@@ -1774,8 +1784,8 @@ READ_FIFO:
 		}
 	}
 
-	
-	
+
+
 	// run data_fusion to filter yaw with compass if new mag data came in
 	if(is_new_dmp_data && config.enable_magnetometer){
 		#ifdef DEBUG
@@ -1815,7 +1825,7 @@ int check_quaternion_validity(unsigned char* raw, int i){
 	quat[3] = ((long)raw[i+12] << 24) | ((long)raw[i+13] << 16) |
 		((long)raw[i+14] << 8) | raw[i+15];
 
-	
+
 	quat_q14[0] = quat[0] >> 16;
 	quat_q14[1] = quat[1] >> 16;
 	quat_q14[2] = quat[2] >> 16;
@@ -1846,15 +1856,15 @@ int data_fusion(rc_imu_data_t* data){
 	float tilt_tb[3], tilt_q[4], mag_vec[3];
 	static float newMagYaw = 0;
 	static float newDMPYaw = 0;
-	float lastDMPYaw, lastMagYaw, newYaw; 
+	float lastDMPYaw, lastMagYaw, newYaw;
 	static int dmp_spin_counter = 0;
 	static int mag_spin_counter = 0;
 	static int first_run = 1; // set to 0 after first call to this function
-	
-	
+
+
 	// start by filling in the roll/pitch components of the fused euler
 	// angles from the DMP generated angles. Ignore yaw for now, we have to
-	// filter that later. 
+	// filter that later.
 	tilt_tb[0] = data->dmp_TaitBryan[TB_PITCH_X];
 	tilt_tb[1] = data->dmp_TaitBryan[TB_ROLL_Y];
 	tilt_tb[2] = 0.0f;
@@ -1928,16 +1938,16 @@ int data_fusion(rc_imu_data_t* data){
 	// save DMP last from time and record newDMPYaw for this time
 	lastDMPYaw = newDMPYaw;
 	newDMPYaw = data->dmp_TaitBryan[TB_YAW_Z];
-	
+
 	// the outputs from atan2 and dmp are between -PI and PI.
 	// for our filters to run smoothly, we can't have them jump between -PI
-	// to PI when doing a complete spin. Therefore we check for a skip and 
+	// to PI when doing a complete spin. Therefore we check for a skip and
 	// increment or decrement the spin counter
 	if(newMagYaw-lastMagYaw < -PI) mag_spin_counter++;
 	else if (newMagYaw-lastMagYaw > PI) mag_spin_counter--;
 	if(newDMPYaw-lastDMPYaw < -PI) dmp_spin_counter++;
 	else if (newDMPYaw-lastDMPYaw > PI) dmp_spin_counter--;
-	
+
 	// if this is the first run, set up filters
 	if(first_run){
 		lastMagYaw = newMagYaw;
@@ -1954,11 +1964,11 @@ int data_fusion(rc_imu_data_t* data){
 		rc_prefill_filter_outputs(&high_pass,0);
 		first_run = 0;
 	}
-	
+
 	// new Yaw is the sum of low and high pass complementary filters.
 	newYaw = rc_march_filter(&low_pass,newMagYaw+(TWO_PI*mag_spin_counter)) \
 			+ rc_march_filter(&high_pass,newDMPYaw+(TWO_PI*dmp_spin_counter));
-			
+
 	newYaw = fmod(newYaw,TWO_PI); // remove the effect of the spins
 	if (newYaw > PI) newYaw -= TWO_PI; // bound between +- PI
 	else if (newYaw < -PI) newYaw += TWO_PI; // bound between +- PI
@@ -1978,7 +1988,7 @@ int data_fusion(rc_imu_data_t* data){
 /*******************************************************************************
 * int write_gyro_offsets_to_disk(int16_t offsets[3])
 *
-* Reads steady state gyro offsets from the disk and puts them in the IMU's 
+* Reads steady state gyro offsets from the disk and puts them in the IMU's
 * gyro offset register. If no calibration file exists then make a new one.
 *******************************************************************************/
 int write_gyro_offets_to_disk(int16_t offsets[3]){
@@ -2013,7 +2023,7 @@ int write_gyro_offets_to_disk(int16_t offsets[3]){
 /*******************************************************************************
 * int load_gyro_offsets()
 *
-* Loads steady state gyro offsets from the disk and puts them in the IMU's 
+* Loads steady state gyro offsets from the disk and puts them in the IMU's
 * gyro offset register. If no calibration file exists then make a new one.
 *******************************************************************************/
 int load_gyro_offets(){
@@ -2021,12 +2031,12 @@ int load_gyro_offets(){
 	char file_path[100];
 	uint8_t data[6];
 	int x,y,z;
-	
+
 	// construct a new file path string and open for reading
 	strcpy (file_path, CONFIG_DIRECTORY);
 	strcat (file_path, GYRO_CAL_FILE);
 	cal = fopen(file_path, "r");
-	
+
 	if (cal == 0) {
 		// calibration file doesn't exist yet
 		fprintf(stderr,"WARNING: no gyro calibration data found\n");
@@ -2046,11 +2056,11 @@ int load_gyro_offets(){
 	printf("offsets: %d %d %d\n", x, y, z);
 	#endif
 
-	// Divide by 4 to get 32.9 LSB per deg/s to conform to expected bias input 
-	// format. also make negative since we wish to subtract out the steady 
+	// Divide by 4 to get 32.9 LSB per deg/s to conform to expected bias input
+	// format. also make negative since we wish to subtract out the steady
 	// state offset
-	data[0] = (-x/4  >> 8) & 0xFF; 
-	data[1] = (-x/4)       & 0xFF; 
+	data[0] = (-x/4  >> 8) & 0xFF;
+	data[1] = (-x/4)       & 0xFF;
 	data[2] = (-y/4  >> 8) & 0xFF;
 	data[3] = (-y/4)       & 0xFF;
 	data[4] = (-z/4  >> 8) & 0xFF;
@@ -2075,7 +2085,7 @@ int rc_calibrate_gyro_routine(){
 	int32_t gyro_sum[3] = {0, 0, 0};
 	int16_t offsets[3];
 	int was_last_steady = 1;
-	
+
 	// make sure the bus is not currently in use by another thread
 	// do not proceed to prevent interfering with that process
 	if(rc_i2c_get_in_use_state(IMU_BUS)){
@@ -2083,29 +2093,29 @@ int rc_calibrate_gyro_routine(){
 		fprintf(stderr,"aborting gyro calibration()\n");
 		return -1;
 	}
-	
+
 	// if it is not claimed, start the i2c bus
 	if(rc_i2c_init(IMU_BUS, IMU_ADDR)){
 		fprintf(stderr,"rc_initialize_imu_dmp failed at rc_i2c_init\n");
 		return -1;
 	}
-	
-	// claiming the bus does no guarantee other code will not interfere 
+
+	// claiming the bus does no guarantee other code will not interfere
 	// with this process, but best to claim it so other code can check
 	// like we did above
 	rc_i2c_claim_bus(IMU_BUS);
-	
+
 	// reset device, reset all registers
 	if(reset_mpu9250()<0){
 		fprintf(stderr,"ERROR: failed to reset MPU9250\n");
 		return -1;
 	}
 
-	// set up the IMU specifically for calibration. 
-	rc_i2c_write_byte(IMU_BUS, PWR_MGMT_1, 0x01);  
-	rc_i2c_write_byte(IMU_BUS, PWR_MGMT_2, 0x00); 
+	// set up the IMU specifically for calibration.
+	rc_i2c_write_byte(IMU_BUS, PWR_MGMT_1, 0x01);
+	rc_i2c_write_byte(IMU_BUS, PWR_MGMT_2, 0x00);
 	rc_usleep(200000);
-	
+
 	// // set bias registers to 0
 	// // Push gyro biases to hardware registers
 	// uint8_t zeros[] = {0,0,0,0,0,0};
@@ -2126,9 +2136,9 @@ int rc_calibrate_gyro_routine(){
 	rc_i2c_write_byte(IMU_BUS, CONFIG, 0x01);      // Set low-pass filter to 188 Hz
 	rc_i2c_write_byte(IMU_BUS, SMPLRT_DIV, 0x04);  // Set sample rate to 200hz
 	// Set gyro full-scale to 250 degrees per second, maximum sensitivity
-	rc_i2c_write_byte(IMU_BUS, GYRO_CONFIG, 0x00); 
-	// Set accelerometer full-scale to 2 g, maximum sensitivity	
-	rc_i2c_write_byte(IMU_BUS, ACCEL_CONFIG, 0x00); 
+	rc_i2c_write_byte(IMU_BUS, GYRO_CONFIG, 0x00);
+	// Set accelerometer full-scale to 2 g, maximum sensitivity
+	rc_i2c_write_byte(IMU_BUS, ACCEL_CONFIG, 0x00);
 
 COLLECT_DATA:
 
@@ -2138,24 +2148,24 @@ COLLECT_DATA:
 	}
 
 	// Configure FIFO to capture gyro data for bias calculation
-	rc_i2c_write_byte(IMU_BUS, USER_CTRL, 0x40);   // Enable FIFO  
+	rc_i2c_write_byte(IMU_BUS, USER_CTRL, 0x40);   // Enable FIFO
 	// Enable gyro sensors for FIFO (max size 512 bytes in MPU-9250)
 	c = FIFO_GYRO_X_EN|FIFO_GYRO_Y_EN|FIFO_GYRO_Z_EN;
-	rc_i2c_write_byte(IMU_BUS, FIFO_EN, c); 
+	rc_i2c_write_byte(IMU_BUS, FIFO_EN, c);
 	// 6 bytes per sample. 200hz. wait 0.4 seconds
 	rc_usleep(400000);
 
 	// At end of sample accumulation, turn off FIFO sensor read
-	rc_i2c_write_byte(IMU_BUS, FIFO_EN, 0x00);   
+	rc_i2c_write_byte(IMU_BUS, FIFO_EN, 0x00);
 	// read FIFO sample count and log number of samples
-	rc_i2c_read_bytes(IMU_BUS, FIFO_COUNTH, 2, &data[0]); 
+	rc_i2c_read_bytes(IMU_BUS, FIFO_COUNTH, 2, &data[0]);
 	int16_t fifo_count = ((uint16_t)data[0] << 8) | data[1];
 	int samples = fifo_count/6;
 
 	#ifdef DEBUG
 	printf("calibration samples: %d\n", samples);
 	#endif
-	
+
 	int i;
 	int16_t x,y,z;
 	rc_vector_t vx = rc_empty_vector();
@@ -2288,32 +2298,32 @@ void print_orientation_info(){
 	printf("\n");
 	//char mtx[9];
 	unsigned short orient;
-	
+
 	// Z-UP (identity matrix)
 	signed char zup[] = {1,0,0, 0,1,0, 0,0,1};
 	orient = inv_orientation_matrix_to_scalar(zup);
 	printf("Z-UP: %d\n", orient);
-	
+
 	// Z-down
 	signed char zdown[] = {-1,0,0, 0,1,0, 0,0,-1};
 	orient = inv_orientation_matrix_to_scalar(zdown);
 	printf("Z-down: %d\n", orient);
-	
+
 	// X-up
 	signed char xup[] = {0,0,-1, 0,1,0, 1,0,0};
 	orient = inv_orientation_matrix_to_scalar(xup);
 	printf("x-up: %d\n", orient);
-	
+
 	// X-down
 	signed char xdown[] = {0,0,1, 0,1,0, -1,0,0};
 	orient = inv_orientation_matrix_to_scalar(xdown);
 	printf("x-down: %d\n", orient);
-	
+
 	// Y-up
 	signed char yup[] = {1,0,0, 0,0,-1, 0,1,0};
 	orient = inv_orientation_matrix_to_scalar(yup);
 	printf("y-up: %d\n", orient);
-	
+
 	// Y-down
 	signed char ydown[] = {1,0,0, 0,0,1, 0,-1,0};
 	orient = inv_orientation_matrix_to_scalar(ydown);
@@ -2333,10 +2343,10 @@ void print_orientation_info(){
 /*******************************************************************************
 * int rc_was_last_imu_read_successful()
 *
-* Occasionally bad data is read from the IMU, but the user's imu interrupt 
+* Occasionally bad data is read from the IMU, but the user's imu interrupt
 * function is always called on every interrupt to keep discrete filters
 * running at a steady clock. In the event of a bad read, old data is always
-* available in the user's rc_imu_data_t struct and the user can call 
+* available in the user's rc_imu_data_t struct and the user can call
 * rc_was_last_imu_read_successful() to see if the data was updated or not.
 *******************************************************************************/
 int rc_was_last_imu_read_successful(){
@@ -2348,7 +2358,7 @@ int rc_was_last_imu_read_successful(){
 *
 * Immediately after the IMU triggers an interrupt saying new data is ready,
 * a timestamp is logged in microseconds. The user's imu_interrupt_function
-* will be called after all data has been read in through the I2C bus and 
+* will be called after all data has been read in through the I2C bus and
 * the user's rc_imu_data_t struct has been populated. If the user wishes to see
 * how long it has been since that interrupt was received they may use this
 * function.
@@ -2360,14 +2370,14 @@ uint64_t rc_nanos_since_last_imu_interrupt(){
 /*******************************************************************************
 * int write_mag_cal_to_disk(float offsets[3], float scale[3])
 *
-* Reads steady state gyro offsets from the disk and puts them in the IMU's 
+* Reads steady state gyro offsets from the disk and puts them in the IMU's
 * gyro offset register. If no calibration file exists then make a new one.
 *******************************************************************************/
 int write_mag_cal_to_disk(float offsets[3], float scale[3]){
 	FILE *cal;
 	char file_path[100];
 	int ret;
-	
+
 	// construct a new file path string and open for writing
 	strcpy(file_path, CONFIG_DIRECTORY);
 	strcat(file_path, MAG_CAL_FILE);
@@ -2383,7 +2393,7 @@ int write_mag_cal_to_disk(float offsets[3], float scale[3]){
 			return -1;
 		}
 	}
-	
+
 	// write to the file, close, and exit
 	ret = fprintf(cal,"%f\n%f\n%f\n%f\n%f\n%f\n", 	offsets[0],\
 													offsets[1],\
@@ -2410,12 +2420,12 @@ int load_mag_calibration(){
 	FILE *cal;
 	char file_path[100];
 	float x,y,z,sx,sy,sz;
-	
+
 	// construct a new file path string and open for reading
 	strcpy (file_path, CONFIG_DIRECTORY);
 	strcat (file_path, MAG_CAL_FILE);
 	cal = fopen(file_path, "r");
-	
+
 	if (cal == 0) {
 		// calibration file doesn't exist yet
 		fprintf(stderr,"WARNING: no magnetometer calibration data found\n");
@@ -2451,7 +2461,7 @@ int load_mag_calibration(){
 * int rc_calibrate_mag_routine()
 *
 * Initializes the IMU and samples the magnetometer until sufficient samples
-* have been collected from each octant. From there, fit an ellipse to the data 
+* have been collected from each octant. From there, fit an ellipse to the data
 * and save the correct offsets and scales to the disk which will later be
 * applied to correct the uncalibrated magnetometer data to map calibrated
 * field vectors to a sphere.
@@ -2468,7 +2478,7 @@ int rc_calibrate_mag_routine(){
 	rc_imu_data_t imu_data; // to collect magnetometer data
 	config = rc_default_imu_config();
 	config.enable_magnetometer = 1;
-	
+
 	// make sure the bus is not currently in use by another thread
 	// do not proceed to prevent interfering with that process
 	if(rc_i2c_get_in_use_state(IMU_BUS)){
@@ -2476,18 +2486,18 @@ int rc_calibrate_mag_routine(){
 		fprintf(stderr,"aborting gyro calibration()\n");
 		return -1;
 	}
-	
+
 	// if it is not claimed, start the i2c bus
 	if(rc_i2c_init(IMU_BUS, IMU_ADDR)){
 		fprintf(stderr,"rc_initialize_imu_dmp failed at rc_i2c_init\n");
 		return -1;
 	}
-	
-	// claiming the bus does no guarantee other code will not interfere 
+
+	// claiming the bus does no guarantee other code will not interfere
 	// with this process, but best to claim it so other code can check
 	// like we did above
 	rc_i2c_claim_bus(IMU_BUS);
-	
+
 	// reset device, reset all registers
 	if(reset_mpu9250()<0){
 		fprintf(stderr,"ERROR: failed to reset MPU9250\n");
@@ -2510,7 +2520,7 @@ int rc_calibrate_mag_routine(){
 		rc_i2c_release_bus(IMU_BUS);
 		return -1;
 	}
-	
+
 	// set local calibration to initial values and prepare variables
 	mag_offsets[0] = 0.0;
 	mag_offsets[1] = 0.0;
@@ -2520,7 +2530,7 @@ int rc_calibrate_mag_routine(){
 	mag_scales[2]  = 1.0;
 	rc_alloc_matrix(&A,samples,3);
 	i = 0;
-		
+
 	// sample data
 	while(i<samples && rc_get_state()!=EXITING){
 		if(rc_read_mag_data(&imu_data)<0){
@@ -2530,14 +2540,14 @@ int rc_calibrate_mag_routine(){
 		// make sure the data is non-zero
 		if(imu_data.mag[0]==0 && imu_data.mag[1]==0 && imu_data.mag[2]==0){
 			fprintf(stderr,"ERROR: retreived all zeros from magnetometer\n");
-			break;	
+			break;
 		}
 		// save data to matrix for ellipse fitting
 		A.d[i][0] = imu_data.mag[0];
 		A.d[i][1] = imu_data.mag[1];
 		A.d[i][2] = imu_data.mag[2];
 		i++;
-		
+
 		// print "keep going" every 4 seconds
 		if(i%(sample_rate_hz*4) == sample_rate_hz*2){
 			printf("keep spinning\n");
@@ -2546,17 +2556,17 @@ int rc_calibrate_mag_routine(){
 		if(i%(sample_rate_hz*4) == 0){
 			printf("you're doing great\n");
 		}
-		
+
 		rc_usleep(1000000/sample_rate_hz);
 	}
 	// done with I2C for now
 	rc_power_off_imu();
 	rc_i2c_release_bus(IMU_BUS);
-	
+
 	printf("\n\nOkay Stop!\n");
 	printf("Calculating calibration constants.....\n");
 	fflush(stdout);
-	
+
 	// if data collection loop exited without getting enough data, warn the
 	// user and return -1, otherwise keep going normally
 	if(i<samples){
@@ -2570,7 +2580,7 @@ int rc_calibrate_mag_routine(){
 		return -1;
 	}
 	// empty memory, we are done with A
-	rc_free_matrix(&A); 
+	rc_free_matrix(&A);
 	// do some sanity checks to make sure data is reasonable
 	if(fabs(center.d[0])>200 || fabs(center.d[1])>200 || \
 											fabs(center.d[2])>200){

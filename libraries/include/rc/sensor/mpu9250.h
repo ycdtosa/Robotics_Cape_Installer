@@ -1,6 +1,3 @@
-#ifndef RC_MPU9250_H
-#define RC_MPU9250_H
-
 /******************************************************************************
 * 9-AXIS IMU
 *
@@ -22,32 +19,32 @@
 * choosing set with the rc_set_imu_interrupt_func() function.
 *
 * @ enum rc_accel_fsr_t rc_gyro_fsr_t
-* 
+*
 * The user may choose from 4 full scale ranges of the accelerometer and
 * gyroscope. They have units of gravity (G) and degrees per second (DPS)
 * The defaults values are A_FSR_4G and G_FSR_1000DPS respectively.
 *
-* enum rc_accel_dlpf_t rc_gyro_dlpf_t 
+* enum rc_accel_dlpf_t rc_gyro_dlpf_t
 *
-* The user may choose from 7 digital low pass filter constants for the 
+* The user may choose from 7 digital low pass filter constants for the
 * accelerometer and gyroscope. The filter runs at 1kz and helps to reduce sensor
 * noise when sampling more slowly. The default values are ACCEL_DLPF_184
 * GYRO_DLPF_250. Lower cut-off frequencies incur phase-loss in measurements.
 *
 * @ struct rc_imu_config_t
 *
-* Configuration struct passed to rc_initialize_imu and rc_initialize_imu_dmp. It is 
+* Configuration struct passed to rc_initialize_imu and rc_initialize_imu_dmp. It is
 * best to get the default config with rc_default_imu_config() function and
 * modify from there.
 *
-* @ struct rc_imu_data_t 
+* @ struct rc_imu_data_t
 *
 * This is the container for holding the sensor data from the IMU.
 * The user is intended to make their own instance of this struct and pass
 * its pointer to imu read functions.
 *
 * @ rc_imu_config_t rc_default_imu_config()
-* 
+*
 * Returns an rc_imu_config_t struct with default settings. Use this as a starting
 * point and modify as you wish.
 *
@@ -69,11 +66,10 @@
 * is slower to read, it is disabled by default.
 *
 ******************************************************************************/
+#ifndef RC_MPU9250_H
+#define RC_MPU9250_H
 
-// POLL_TIMEOUT AND INTERRUPT_PIN
-
-#define POLL_TIMEOUT 100 /* 0.1 seconds */
-#define IMU_INTERRUPT_PIN 117  //gpio3.21 P9.25
+#include <stdint.h>
 
 // defines for index location within TaitBryan and quaternion vectors
 #define TB_PITCH_X	0
@@ -95,7 +91,7 @@ typedef enum rc_gyro_fsr_t{
   G_FSR_250DPS,
   G_FSR_500DPS,
   G_FSR_1000DPS,
-  G_FSR_2000DPS 
+  G_FSR_2000DPS
 } rc_gyro_fsr_t;
 
 typedef enum rc_accel_dlpf_t{
@@ -133,14 +129,14 @@ typedef struct rc_imu_config_t{
 	// full scale ranges for sensors
 	rc_accel_fsr_t accel_fsr; // AFS_2G, AFS_4G, AFS_8G, AFS_16G
 	rc_gyro_fsr_t gyro_fsr;  // GFS_250,GFS_500,GFS_1000,GFS_2000
-	
+
 	// internal low pass filter constants
 	rc_gyro_dlpf_t gyro_dlpf;
 	rc_accel_dlpf_t accel_dlpf;
-	
-	// magnetometer use is optional 
+
+	// magnetometer use is optional
 	int enable_magnetometer; // 0 or 1
-	
+
 	// DMP settings, only used with DMP interrupt
 	int dmp_sample_rate;
 	rc_imu_orientation_t orientation; //orientation matrix
@@ -157,21 +153,21 @@ typedef struct rc_imu_data_t{
 	float gyro[3];	// units of degrees/s
 	float mag[3];	// units of uT
 	float temp;		// units of degrees Celsius
-	
+
 	// 16 bit raw adc readings from each sensor
-	int16_t raw_gyro[3];	
+	int16_t raw_gyro[3];
 	int16_t raw_accel[3];
-	
+
 	// FSR-derived conversion ratios from raw to real units
 	float accel_to_ms2;	// to m/s^2
 	float gyro_to_degs;	// to degrees/s
-	
+
 	// everything below this line is available in DMP mode only
 	// quaternion and TaitBryan angles from DMP based on ONLY Accel/Gyro
 	float dmp_quat[4];		// normalized quaternion
 	float dmp_TaitBryan[3];	// radians pitch/roll/yaw X/Y/Z
-	
-	// If magnetometer is enabled in DMP mode, the following quaternion and 
+
+	// If magnetometer is enabled in DMP mode, the following quaternion and
 	// TaitBryan angles will be available which add magnetometer data to filter
 	float fused_quat[4];		// normalized quaternion
 	float fused_TaitBryan[3];	// radians pitch/roll/yaw X/Y/Z
