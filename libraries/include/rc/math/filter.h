@@ -20,7 +20,8 @@
 * order is derived from the length of the denominator polynomial.
 * Returns 0 on success or -1 on failure.
 *
-* @ int rc_alloc_filter_from_arrays(rc_filter_t* f,int order,float dt,float* num,float* den)
+* @ int rc_alloc_filter_from_arrays(rc_filter_t* f,float dt,float* num,
+					int numlen,float* den,int denlen)
 *
 * Like rc_alloc_filter(), but takes arrays for the numerator and denominator
 * coefficients instead of vectors. Arrays num and denmust be the same length
@@ -255,7 +256,8 @@ typedef struct rc_filter_t{
 } rc_filter_t;
 
 int   rc_alloc_filter(rc_filter_t* f, rc_vector_t num, rc_vector_t den, float dt);
-int   rc_alloc_filter_from_arrays(rc_filter_t* f,int order,float dt,float* num,float* den);
+int   rc_alloc_filter_from_arrays(rc_filter_t* f,float dt,float* num,int numlen,\
+							float* den,int denlen);
 int   rc_free_filter(rc_filter_t* f);
 rc_filter_t rc_empty_filter();
 int   rc_print_filter(rc_filter_t f);

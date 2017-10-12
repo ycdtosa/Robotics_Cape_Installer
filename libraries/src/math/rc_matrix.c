@@ -16,13 +16,13 @@
 /*******************************************************************************
 * int rc_alloc_matrix(rc_matrix_t* A, int rows, int cols)
 *
-* Allocates memory for matrix A to have new dimensions given by arguments rows 
+* Allocates memory for matrix A to have new dimensions given by arguments rows
 * and cols. If A is initially the right size, nothing is done and the data in A
 * is preserved. If A is uninitialized or of the wrong size then any existing
 * memory is freed and new memory is allocated, helping to prevent accidental
 * memory leaks. The contents of the new matrix is not guaranteed to be anything
 * in particular.
-* Returns 0 on success, otherwise -1. Will only be unsuccessful if 
+* Returns 0 on success, otherwise -1. Will only be unsuccessful if
 * rows&cols are invalid or there is insufficient memory available.
 *******************************************************************************/
 int rc_alloc_matrix(rc_matrix_t* A, int rows, int cols){
@@ -38,7 +38,7 @@ int rc_alloc_matrix(rc_matrix_t* A, int rows, int cols){
 	}
 	// if A is already allocated and of the right size, nothing to do!
 	if(A->initialized && rows==A->rows && cols==A->cols) return 0;
-	// free any old memory 
+	// free any old memory
 	rc_free_matrix(A);
 	// allocate contiguous memory for the major(row) pointers
 	A->d = (float**)malloc(rows*sizeof(float*));
@@ -90,7 +90,7 @@ int rc_free_matrix(rc_matrix_t* A){
 * Returns an rc_matrix_t with no allocated memory and the initialized flag set
 * to 0. This is useful for initializing rc_matrix_t structs when they are
 * declared since local variables declared in a function without global variable
-* scope in C are not guaranteed to be zeroed out which can lead to bad memory 
+* scope in C are not guaranteed to be zeroed out which can lead to bad memory
 * pointers and segfaults if not handled carefully. We recommend initializing all
 * matrices with this before using rc_alloc_matrix or any other function.
 *******************************************************************************/
@@ -110,7 +110,7 @@ rc_matrix_t rc_empty_matrix(){
 * int rc_matrix_zeros(rc_matrix_t* A, int rows, int cols)
 *
 * Resizes matrix A and allocates memory for a matrix with specified rows &
-* columns. The new memory is pre-filled with zeros. Any existing memory 
+* columns. The new memory is pre-filled with zeros. Any existing memory
 * allocated for A is freed if necessary to avoid memory leaks.
 * Returns 0 on success or -1 on error.
 *******************************************************************************/
@@ -187,7 +187,7 @@ int rc_random_matrix(rc_matrix_t* A, int rows, int cols){
 /*******************************************************************************
 * int rc_diag_matrix(rc_matrix_t* A, rc_vector_t v)
 *
-* Resizes A to be a square matrix with the same number of rows and columns as 
+* Resizes A to be a square matrix with the same number of rows and columns as
 * vector v's length. The diagonal entries of A are then populated with the
 * contents of v and the off-diagonal entries are set to 0. The original contents
 * of A are freed to avoid memory leaks.
@@ -245,10 +245,10 @@ int rc_duplicate_matrix(rc_matrix_t A, rc_matrix_t* B){
 *
 * However, we provide this function for completeness. It is not strictly
 * necessary for A to be provided as a pointer since a copy of the struct A
-* would also contain the correct pointer to the original matrix's allocated 
-* memory. However, in this library we use the convention of passing an 
-* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be 
-* modified by the function, and as a normal argument when it is only to be read 
+* would also contain the correct pointer to the original matrix's allocated
+* memory. However, in this library we use the convention of passing an
+* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be
+* modified by the function, and as a normal argument when it is only to be read
 * by the function. Returns 0 on success or -1 on error.
 *******************************************************************************/
 int rc_set_matrix_entry(rc_matrix_t* A, int row, int col, float val){
@@ -327,7 +327,7 @@ int rc_print_matrix(rc_matrix_t A){
 * void rc_print_matrix_sci(rc_matrix_t A)
 *
 * Prints the contents of matrix A to stdout in scientific notation with 4
-* significant figures. Not recommended for very large matrices as rows will 
+* significant figures. Not recommended for very large matrices as rows will
 * typically linewrap if the terminal window is not wide enough.
 *******************************************************************************/
 void rc_print_matrix_sci(rc_matrix_t A){
@@ -339,7 +339,7 @@ void rc_print_matrix_sci(rc_matrix_t A){
 	for(i=0;i<A.rows;i++){
 		for(j=0;j<A.cols;j++){
 			printf("%11.4e  ",A.d[i][j]);
-		}	
+		}
 		printf("\n");
 	}
 	return;
@@ -350,10 +350,10 @@ void rc_print_matrix_sci(rc_matrix_t A){
 *
 * Multiplies every entry in A by scalar value s. It is not strictly
 * necessary for A to be provided as a pointer since a copy of the struct A
-* would also contain the correct pointer to the original matrix's allocated 
-* memory. However, in this library we use the convention of passing an 
-* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be 
-* modified by the function, and as a normal argument when it is only to be read 
+* would also contain the correct pointer to the original matrix's allocated
+* memory. However, in this library we use the convention of passing an
+* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be
+* modified by the function, and as a normal argument when it is only to be read
 * by the function. Returns 0 on success or -1 on failure.
 *******************************************************************************/
 int rc_matrix_times_scalar(rc_matrix_t* A, float s){
@@ -370,7 +370,7 @@ int rc_matrix_times_scalar(rc_matrix_t* A, float s){
 /*******************************************************************************
 * int rc_multiply_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C)
 *
-* Multiplies A*B=C. C is resized and its original contents are freed if 
+* Multiplies A*B=C. C is resized and its original contents are freed if
 * necessary to avoid memory leaks. Returns 0 on success or -1 on failure.
 *******************************************************************************/
 int rc_multiply_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C){
@@ -389,7 +389,7 @@ int rc_multiply_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C){
 		fprintf(stderr,"ERROR in rc_multiply_matrices, can't allocate memory for C\n");
 		return -1;
 	}
-	// allocate memory for a column of B from the stack, this is faster than 
+	// allocate memory for a column of B from the stack, this is faster than
 	// malloc and the memory is freed automatically when this function returns
 	// it is faster to put a column in contiguous memory before multiplying
 	tmp = alloca(B.rows*sizeof(float));
@@ -453,7 +453,7 @@ int rc_right_multiply_matrix_inplace(rc_matrix_t* A, rc_matrix_t B){
 *
 * Resizes matrix C and places the sum A+B in C. The original contents of C are
 * safely freed if necessary to avoid memory leaks.
-* Returns 0 on success or -1 on failure. 
+* Returns 0 on success or -1 on failure.
 *******************************************************************************/
 int rc_add_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C){
 	int i;
@@ -510,14 +510,14 @@ int rc_matrix_transpose(rc_matrix_t A, rc_matrix_t* T){
 		return -1;
 	}
 	// make sure T is allocated
-	if(unlikely(rc_alloc_matrix(T,A.rows,A.cols))){
+	if(unlikely(rc_alloc_matrix(T,A.cols,A.rows))){
 		fprintf(stderr,"ERROR in rc_matrix_transpose, can't allocate memory for T\n");
 		return -1;
 	}
 	// fill in new memory
 	for(i=0;i<(A.rows);i++){
 		for(j=0;j<(A.cols);j++){
-			T->d[i][j] = A.d[j][i];
+			T->d[j][i] = A.d[i][j];
 		}
 	}
 	return 0;
@@ -541,7 +541,7 @@ int rc_matrix_transpose_inplace(rc_matrix_t* A){
 	}
 	// shortcut for 1x1 matrix
 	if(A->rows==1 && A->cols==1) return 0;
-	// allocate memory for new A, easier than doing it in place since A will 
+	// allocate memory for new A, easier than doing it in place since A will
 	// change size if non-square
 	rc_matrix_t tmp = rc_empty_matrix();
 	if(unlikely(rc_matrix_transpose(*A, &tmp))){
@@ -557,7 +557,7 @@ int rc_matrix_transpose_inplace(rc_matrix_t* A){
 
 /*******************************************************************************
 * int rc_vector_outer_product(rc_vector_t v1, rc_vector_t v2, rc_matrix_t* A)
-* 
+*
 * Computes v1 times v2 where v1 is a column vector and v2 is a row vector.
 * Output is a matrix with same rows as v1 and same columns as v2.
 * Returns 0 on success, otherwise -1.
