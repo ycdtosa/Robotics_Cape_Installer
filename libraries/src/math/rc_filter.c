@@ -501,7 +501,9 @@ int rc_prefill_filter_inputs(rc_filter_t* f, float in)
 		fprintf(stderr,"ERROR in rc_prefill_filter_inputs, filter uninitialized\n");
 		return -1;
 	}
-	for(i=0;i<f->order;i++) rc_insert_new_ringbuf_value(&f->in_buf, in);
+	for(i=0;i<=f->order;i++){
+		rc_insert_new_ringbuf_value(&f->in_buf, in);
+	}
 	f->newest_input = in;
 	return 0;
 }
@@ -520,7 +522,9 @@ int rc_prefill_filter_outputs(rc_filter_t* f, float out)
 		fprintf(stderr,"ERROR in rc_prefill_filter_outputs, filter uninitialized\n");
 		return -1;
 	}
-	for(i=0;i<f->order;i++) rc_insert_new_ringbuf_value(&(f->out_buf), out);
+	for(i=0;i<=f->order;i++){
+		rc_insert_new_ringbuf_value(&(f->out_buf), out);
+	}
 	f->newest_output = out;
 	return 0;
 }
