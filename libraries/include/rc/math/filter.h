@@ -230,25 +230,25 @@
 
 typedef struct rc_filter_t{
 	// transfer function properties
-	int order;			// transfer function order
-	float dt;			// timestep in seconds
-	float gain;			// gain usually 1.0
+	int order;		// transfer function order
+	float dt;		// timestep in seconds
+	float gain;		// gain usually 1.0
 	rc_vector_t num;	// numerator coefficients
 	rc_vector_t den;	// denominator coefficients
 	// saturation settings
-	int sat_en;			// set to 1 by enable_saturation()
+	int sat_en;		// set to 1 by enable_saturation()
 	float sat_min;		// lower saturation limit
 	float sat_max;		// upper saturation limit
 	int sat_flag;		// 1 if saturated on the last step
 	// soft start settings
-	int ss_en;			// set to 1 by enbale_soft_start()
+	int ss_en;		// set to 1 by enbale_soft_start()
 	float ss_steps;		// steps before full output allowed
 	// dynamically allocated ring buffers
 	rc_ringbuf_t in_buf;
 	rc_ringbuf_t out_buf;
 	// newest input and output for quick reference
 	float newest_input;	// shortcut for the most recent input
-	float newest_output;// shortcut for the most recent output
+	float newest_output;	// shortcut for the most recent output
 	// other
 	uint64_t step;		// steps since last reset
 	int initialized;	// initialization flag
