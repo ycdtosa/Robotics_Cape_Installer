@@ -382,9 +382,9 @@ void rc_quaternion_multiply_array(float a[4], float b[4], float c[4])
 	tmp[3][2] =  a[1];
 	tmp[3][3] =  a[0];
 	// multiply
-	for(i=0;i<3;i++){
+	for(i=0;i<4;i++){
 		c[i]=0.0f;
-		for(j=0;j<3;j++) c[i]+=tmp[i][j]*b[j];
+		for(j=0;j<4;j++) c[i]+=tmp[i][j]*b[j];
 	}
 	return;
 }
