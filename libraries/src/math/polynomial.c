@@ -10,10 +10,8 @@
 #include <stdio.h>
 #include <math.h>	// for sqrt, pow, etc
 
-//#include "rc_algebra_common.h"
-#include <rc/other/preprocessor_macros.h>
-
-#include <rc/math/polynomial.h>
+#include "rc/other/preprocessor_macros.h"
+#include "rc/math/polynomial.h"
 
 /*******************************************************************************
 * int rc_print_poly(rc_vector_t v)
@@ -34,7 +32,7 @@ int rc_print_poly(rc_vector_t v){
 	if(unlikely(v.len>10)){
 		fprintf(stderr,"ERROR in rc_print_poly, vector length must be <=10\n");
 		return -1;
-	} 
+	}
 	for(i=0;i<(v.len-2);i++){
 		printf("%7.4fx%s + ",v.d[i],super[v.len-i-1]);
 	}
@@ -214,7 +212,7 @@ int rc_poly_subtract(rc_vector_t a, rc_vector_t b, rc_vector_t* c){
 /*******************************************************************************
 * int rc_poly_subtract_inplace(rc_vector_t* a, rc_vector_t b)
 *
-* Subtracts b from a with right justification. a stays in place and new memory 
+* Subtracts b from a with right justification. a stays in place and new memory
 * is allocated only if b is longer than a.
 *******************************************************************************/
 int rc_poly_subtract_inplace(rc_vector_t* a, rc_vector_t b){
@@ -236,7 +234,7 @@ int rc_poly_subtract_inplace(rc_vector_t* a, rc_vector_t b){
 /*******************************************************************************
 * int rc_poly_differentiate(rc_vector_t a, int d, rc_vector_t* b)
 *
-* Calculates the dth derivative of the polynomial a and places the result in 
+* Calculates the dth derivative of the polynomial a and places the result in
 * vector b. Returns 0 on success or -1 on failure.
 *******************************************************************************/
 int rc_poly_differentiate(rc_vector_t a, int d, rc_vector_t* b){
@@ -314,7 +312,7 @@ int rc_poly_divide(rc_vector_t n, rc_vector_t d, rc_vector_t* div, rc_vector_t* 
 		rc_free_vector(div);
 		return -1;
 	}
-	// calculate each entry in divisor, if num and den are same length 
+	// calculate each entry in divisor, if num and den are same length
 	// this will happen only once with i=0
 	for(i=0;i<=diff;i++){
 		div->d[i]=tmp.d[i]/d.d[0];
