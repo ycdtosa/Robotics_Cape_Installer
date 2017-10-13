@@ -79,7 +79,7 @@ int rc_normalize_quaternion_array(float q[4])
 	int i;
 	float len;
 	float sum=0.0f;
-	for(i=0;i<3;i++) sum+=q[i]*q[i];
+	for(i=0;i<4;i++) sum+=q[i]*q[i];
 	len = sqrtf(sum);
 
 	// can't check if length is below a constant value as q may be filled
@@ -267,7 +267,7 @@ void rc_quaternion_conjugate_array(float q[4], float c[4])
 * Conjugates quaternion q by multiplying the 3 imaginary parts ijk by -1.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-void rc_quaternion_conjugate_array_inplace(float q[4]
+void rc_quaternion_conjugate_array_inplace(float q[4])
 {
 	q[1] = -q[1];
 	q[2] = -q[2];
