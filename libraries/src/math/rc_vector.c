@@ -477,7 +477,7 @@ float rc_std_dev(rc_vector_t v)
 		diff = v.d[i]-mean;
 		mean_sqr += diff*diff;
 	}
-	return sqrt(mean_sqr/(float)v.len);
+	return sqrt(mean_sqr/(float)(v.len-1));
 }
 
 /*******************************************************************************
