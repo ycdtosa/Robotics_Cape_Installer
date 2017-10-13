@@ -25,7 +25,8 @@
 * Returns 0 on success, otherwise -1. Will only be unsuccessful if
 * rows&cols are invalid or there is insufficient memory available.
 *******************************************************************************/
-int rc_alloc_matrix(rc_matrix_t* A, int rows, int cols){
+int rc_alloc_matrix(rc_matrix_t* A, int rows, int cols)
+{
 	int i;
 	// sanity checks
 	if(unlikely(rows<1 || cols<1)){
@@ -71,7 +72,8 @@ int rc_alloc_matrix(rc_matrix_t* A, int rows, int cols){
 * Returns 0 on success. Will only fail and return -1 if it is passed a NULL
 * pointer.
 *******************************************************************************/
-int rc_free_matrix(rc_matrix_t* A){
+int rc_free_matrix(rc_matrix_t* A)
+{
 	if(unlikely(A==NULL)){
 		fprintf(stderr,"ERROR in rc_free_matrix, received NULL pointer\n");
 		return -1;
@@ -94,7 +96,8 @@ int rc_free_matrix(rc_matrix_t* A){
 * pointers and segfaults if not handled carefully. We recommend initializing all
 * matrices with this before using rc_alloc_matrix or any other function.
 *******************************************************************************/
-rc_matrix_t rc_empty_matrix(){
+rc_matrix_t rc_empty_matrix()
+{
 	rc_matrix_t out;
 	// zero out the contents of the struct piecemeal instead of with memset
 	// in case the struct changes in the future or if compiled with different
@@ -114,7 +117,8 @@ rc_matrix_t rc_empty_matrix(){
 * allocated for A is freed if necessary to avoid memory leaks.
 * Returns 0 on success or -1 on error.
 *******************************************************************************/
-int rc_matrix_zeros(rc_matrix_t* A, int rows, int cols){
+int rc_matrix_zeros(rc_matrix_t* A, int rows, int cols)
+{
 	int i;
 	// sanity checks
 	if(unlikely(rows<1 || cols<1)){
@@ -155,7 +159,8 @@ int rc_matrix_zeros(rc_matrix_t* A, int rows, int cols){
 * existing memory allocated for A is freed if necessary to avoid memory leaks.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_identity_matrix(rc_matrix_t* A, int dim){
+int rc_identity_matrix(rc_matrix_t* A, int dim)
+{
 	int i;
 	if(unlikely(rc_matrix_zeros(A,dim,dim))){
 		fprintf(stderr,"ERROR in rc_identity_matrix, failed to allocate matrix\n");
@@ -174,7 +179,8 @@ int rc_identity_matrix(rc_matrix_t* A, int dim){
 * and 1.0. Any existing memory allocated for A is freed if necessary to avoid
 * memory leaks. Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_random_matrix(rc_matrix_t* A, int rows, int cols){
+int rc_random_matrix(rc_matrix_t* A, int rows, int cols)
+{
 	int i;
 	if(unlikely(rc_alloc_matrix(A,rows,cols))){
 		fprintf(stderr,"ERROR in rc_random_matrix, failed to allocate matrix\n");
@@ -193,7 +199,8 @@ int rc_random_matrix(rc_matrix_t* A, int rows, int cols){
 * of A are freed to avoid memory leaks.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_diag_matrix(rc_matrix_t* A, rc_vector_t v){
+int rc_diag_matrix(rc_matrix_t* A, rc_vector_t v)
+{
 	int i;
 	// sanity check
 	if(unlikely(!v.initialized)){
@@ -218,7 +225,8 @@ int rc_diag_matrix(rc_matrix_t* A, rc_vector_t v){
 * is allocated to hold the duplicate of A.
 * Returns 0 on success or -1 on error.
 *******************************************************************************/
-int rc_duplicate_matrix(rc_matrix_t A, rc_matrix_t* B){
+int rc_duplicate_matrix(rc_matrix_t A, rc_matrix_t* B)
+{
 	// sanity check
 	if(unlikely(!A.initialized)){
 		fprintf(stderr,"ERROR in rc_duplicate_matrix not initialized yet\n");
@@ -251,7 +259,8 @@ int rc_duplicate_matrix(rc_matrix_t A, rc_matrix_t* B){
 * modified by the function, and as a normal argument when it is only to be read
 * by the function. Returns 0 on success or -1 on error.
 *******************************************************************************/
-int rc_set_matrix_entry(rc_matrix_t* A, int row, int col, float val){
+int rc_set_matrix_entry(rc_matrix_t* A, int row, int col, float val)
+{
 	if(unlikely(A==NULL)){
 		fprintf(stderr,"ERROR in rc_set_matrix_entry, received null pointer\n");
 		return -1;
@@ -285,7 +294,8 @@ int rc_set_matrix_entry(rc_matrix_t* A, int row, int col, float val){
 * However, we provide this function for completeness. It also provides sanity
 * checks to avoid possible segfaults.
 *******************************************************************************/
-float rc_get_matrix_entry(rc_matrix_t A, int row, int col){
+float rc_get_matrix_entry(rc_matrix_t A, int row, int col)
+{
 	if(unlikely(!A.initialized)){
 		fprintf(stderr,"ERROR in rc_get_matrix_entry, ,matrix not initialized yet\n");
 		return -1.0f;
@@ -308,7 +318,8 @@ float rc_get_matrix_entry(rc_matrix_t A, int row, int col){
 * places. Not recommended for very large matrices as rows will typically
 * linewrap if the terminal window is not wide enough.
 *******************************************************************************/
-int rc_print_matrix(rc_matrix_t A){
+int rc_print_matrix(rc_matrix_t A)
+{
 	int i,j;
 	if(unlikely(!A.initialized)){
 		fprintf(stderr,"ERROR in rc_print_matrix, matrix not initialized yet\n");
@@ -330,7 +341,8 @@ int rc_print_matrix(rc_matrix_t A){
 * significant figures. Not recommended for very large matrices as rows will
 * typically linewrap if the terminal window is not wide enough.
 *******************************************************************************/
-void rc_print_matrix_sci(rc_matrix_t A){
+void rc_print_matrix_sci(rc_matrix_t A)
+{
 	int i,j;
 	if(unlikely(!A.initialized)){
 		fprintf(stderr,"ERROR in rc_print_matrix_sci, matrix not initialized yet\n");
@@ -356,7 +368,8 @@ void rc_print_matrix_sci(rc_matrix_t A){
 * modified by the function, and as a normal argument when it is only to be read
 * by the function. Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_matrix_times_scalar(rc_matrix_t* A, float s){
+int rc_matrix_times_scalar(rc_matrix_t* A, float s)
+{
 	int i;
 	if(unlikely(!A->initialized)){
 		fprintf(stderr,"ERROR in rc_matrix_times_scalar. matrix uninitialized\n");
@@ -373,7 +386,8 @@ int rc_matrix_times_scalar(rc_matrix_t* A, float s){
 * Multiplies A*B=C. C is resized and its original contents are freed if
 * necessary to avoid memory leaks. Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_multiply_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C){
+int rc_multiply_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C)
+{
 	int i,j;
 	float* tmp;
 	if(unlikely(!A.initialized||!B.initialized)){
@@ -416,7 +430,8 @@ int rc_multiply_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C){
 * its original contents are freed if necessary to avoid memory leaks.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_left_multiply_matrix_inplace(rc_matrix_t A, rc_matrix_t* B){
+int rc_left_multiply_matrix_inplace(rc_matrix_t A, rc_matrix_t* B)
+{
 	rc_matrix_t tmp = rc_empty_matrix();
 	// use the normal multiply function which will allocate memory for tmp
 	if(rc_multiply_matrices(A, *B, &tmp)){
@@ -436,7 +451,8 @@ int rc_left_multiply_matrix_inplace(rc_matrix_t A, rc_matrix_t* B){
 * its original contents are freed if necessary to avoid memory leaks.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_right_multiply_matrix_inplace(rc_matrix_t* A, rc_matrix_t B){
+int rc_right_multiply_matrix_inplace(rc_matrix_t* A, rc_matrix_t B)
+{
 	rc_matrix_t tmp = rc_empty_matrix();
 	if(rc_multiply_matrices(*A, B, &tmp)){
 		fprintf(stderr,"ERROR in rc_right_multiply_matrix_inplace, failed to multiply\n");
@@ -455,7 +471,8 @@ int rc_right_multiply_matrix_inplace(rc_matrix_t* A, rc_matrix_t B){
 * safely freed if necessary to avoid memory leaks.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_add_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C){
+int rc_add_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C)
+{
 	int i;
 	if(unlikely(!A.initialized||!B.initialized)){
 		fprintf(stderr,"ERROR in rc_add_matrices, matrix not initialized\n");
@@ -482,7 +499,8 @@ int rc_add_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C){
 * are lost. Use rc_add_matrices if you wish to keep the contents of both matrix
 * A and B. Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_add_matrices_inplace(rc_matrix_t* A, rc_matrix_t B){
+int rc_add_matrices_inplace(rc_matrix_t* A, rc_matrix_t B)
+{
 	int i;
 	if(unlikely(!A->initialized||!B.initialized)){
 		fprintf(stderr,"ERROR in rc_add_matrices_inplace, matrix not initialized\n");
@@ -503,7 +521,8 @@ int rc_add_matrices_inplace(rc_matrix_t* A, rc_matrix_t B){
 * Resizes matrix T to hold the transposed contents of A and leaves A untouched.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_matrix_transpose(rc_matrix_t A, rc_matrix_t* T){
+int rc_matrix_transpose(rc_matrix_t A, rc_matrix_t* T)
+{
 	int i,j;
 	if(unlikely(!A.initialized)){
 		fprintf(stderr,"ERROR in rc_matrix_transpose, received uninitialized matrix\n");
@@ -530,7 +549,8 @@ int rc_matrix_transpose(rc_matrix_t A, rc_matrix_t* T){
 * if you no longer have need for the original contents of matrix A.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_matrix_transpose_inplace(rc_matrix_t* A){
+int rc_matrix_transpose_inplace(rc_matrix_t* A)
+{
 	if(unlikely(A==NULL)){
 		fprintf(stderr,"ERROR in rc_transpose_matrix_inplace, received NULL pointer\n");
 		return -1;
@@ -562,7 +582,8 @@ int rc_matrix_transpose_inplace(rc_matrix_t* A){
 * Output is a matrix with same rows as v1 and same columns as v2.
 * Returns 0 on success, otherwise -1.
 *******************************************************************************/
-int rc_vector_outer_product(rc_vector_t v1, rc_vector_t v2, rc_matrix_t* A){
+int rc_vector_outer_product(rc_vector_t v1, rc_vector_t v2, rc_matrix_t* A)
+{
 	int i, j;
 	if(unlikely(!v1.initialized || !v2.initialized)){
 		fprintf(stderr,"ERROR in rc_vector_outer_product, vector uninitialized\n");
@@ -572,13 +593,9 @@ int rc_vector_outer_product(rc_vector_t v1, rc_vector_t v2, rc_matrix_t* A){
 		fprintf(stderr,"ERROR in rc_vector_outer_product, failed to allocate A\n");
 		return -1;
 	}
-	// rc_matrix_t is row-major so rows are contiguous in memory. Thus, we fill
-	// in the rows of 'out' in the inner loop so writes are continuous. Both the
-	// vectors are contiguous in memory and are just interpreted as a row or
-	// column vector.
-	for(j=0;j<v2.len;j++){
-		for(i=0;i<v1.len;i++){
-			A->d[j][i] = v1.d[i]*v2.d[j];
+	for(i=0;i<v1.len;i++){
+		for(j=0;j<v2.len;j++){
+			A->d[i][j] = v1.d[i]*v2.d[j];
 		}
 	}
 	return 0;

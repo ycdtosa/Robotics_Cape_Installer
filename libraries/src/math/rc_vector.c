@@ -21,12 +21,13 @@
 * Allocates memory for vector v to have specified length. If v is initially the
 * right length then nothing is done and the data in v is preserved. If v is
 * uninitialized or of the wrong length then any existing memory is freed and new
-* memory is allocated, helping to prevent accidental memory leaks. The contents 
+* memory is allocated, helping to prevent accidental memory leaks. The contents
 * of the new vector is not guaranteed to be anything in particular.
-* Returns 0 if successful, otherwise returns -1. Will only be unsuccessful if 
+* Returns 0 if successful, otherwise returns -1. Will only be unsuccessful if
 * length is invalid or there is insufficient memory available.
 *******************************************************************************/
-int rc_alloc_vector(rc_vector_t* v, int length){
+int rc_alloc_vector(rc_vector_t* v, int length)
+{
 	// sanity checks
 	if(unlikely(length<1)){
 		fprintf(stderr,"ERROR in rc_alloc_vector, length must be >=1\n");
@@ -38,7 +39,7 @@ int rc_alloc_vector(rc_vector_t* v, int length){
 	}
 	// if v is already allocated and of the right size, nothing to do!
 	if(v->initialized && v->len==length) return 0;
-	// free any old memory 
+	// free any old memory
 	rc_free_vector(v);
 	// allocate contiguous memory for the vector
 	v->d = (float*)malloc(length*sizeof(float));
@@ -61,7 +62,8 @@ int rc_alloc_vector(rc_vector_t* v, int length){
 * Returns 0 on success. Will only fail and return -1 if it is passed a NULL
 * pointer.
 *******************************************************************************/
-int rc_free_vector(rc_vector_t* v){
+int rc_free_vector(rc_vector_t* v)
+{
 	if(unlikely(v==NULL)){
 		fprintf(stderr,"ERROR rc_free_vector, received NULL pointer\n");
 		return -1;
@@ -79,11 +81,12 @@ int rc_free_vector(rc_vector_t* v){
 * Returns an rc_vector_t with no allocated memory and the initialized flag set
 * to 0. This is useful for initializing vectors when they are declared since
 * local variables declared in a function without global variable scope in C are
-* not guaranteed to be zeroed out which can lead to bad memory pointers and 
+* not guaranteed to be zeroed out which can lead to bad memory pointers and
 * segfaults if not handled carefully. We recommend initializing all
 * vectors with this function before using rc_alloc_matrix or any other function.
 *******************************************************************************/
-rc_vector_t rc_empty_vector(){
+rc_vector_t rc_empty_vector()
+{
 	rc_vector_t out;
 	out.d = NULL;
 	out.len = 0;
@@ -99,7 +102,8 @@ rc_vector_t rc_empty_vector(){
 * is freed if necessary to avoid memory leaks.
 * Returns 0 on success or -1 on error.
 *******************************************************************************/
-int rc_vector_zeros(rc_vector_t* v, int length){
+int rc_vector_zeros(rc_vector_t* v, int length)
+{
 	if(unlikely(length<1)){
 		fprintf(stderr,"ERROR in rc_vector_zeros, length must be >=1\n");
 		return -1;
@@ -108,7 +112,7 @@ int rc_vector_zeros(rc_vector_t* v, int length){
 		fprintf(stderr,"ERROR in rc_vector_zeros, received NULL pointer\n");
 		return -1;
 	}
-	// free any old memory 
+	// free any old memory
 	rc_free_vector(v);
 	// allocate contiguous zeroed-out memory for the vector
 	v->d = (float*)calloc(length,sizeof(float));
@@ -129,7 +133,8 @@ int rc_vector_zeros(rc_vector_t* v, int length){
 * allocated for v is freed if necessary to avoid memory leaks.
 * Returns 0 on success or -1 on error.
 *******************************************************************************/
-int rc_vector_ones(rc_vector_t* v, int length){
+int rc_vector_ones(rc_vector_t* v, int length)
+{
 	int i;
 	if(unlikely(rc_alloc_vector(v, length))){
 		fprintf(stderr,"ERROR in rc_vector_ones, failed to allocate vector\n");
@@ -144,11 +149,12 @@ int rc_vector_ones(rc_vector_t* v, int length){
 *
 * Resizes vector v and allocates memory for a vector with specified length.
 * The new memory is pre-filled with random floating-point values between -1.0f
-* and 1.0f. Any existing memory allocated for v is freed if necessary to avoid 
+* and 1.0f. Any existing memory allocated for v is freed if necessary to avoid
 * memory leaks.
 * Returns 0 on success or -1 on error.
 *******************************************************************************/
-int rc_random_vector(rc_vector_t* v, int length){
+int rc_random_vector(rc_vector_t* v, int length)
+{
 	int i;
 	if(unlikely(rc_alloc_vector(v, length))){
 		fprintf(stderr,"ERROR rc_random_vector, failed to allocate vector\n");
@@ -164,7 +170,8 @@ int rc_random_vector(rc_vector_t* v, int length){
 * Creates a vector of specified length populated with the fibonnaci sequence.
 * Returns 0 on success or -1 on error.
 *******************************************************************************/
-int rc_vector_fibonnaci(rc_vector_t* v, int length){
+int rc_vector_fibonnaci(rc_vector_t* v, int length)
+{
 	int i;
 	if(unlikely(rc_alloc_vector(v, length))){
 		fprintf(stderr,"ERROR rc_vector_fibonnaci, failed to allocate vector\n");
@@ -180,13 +187,14 @@ int rc_vector_fibonnaci(rc_vector_t* v, int length){
 /*******************************************************************************
 * int rc_vector_from_array(rc_vector_t* v, float* ptr, int length)
 *
-* Sometimes you will have a normal C-array of floats and wish to convert to 
+* Sometimes you will have a normal C-array of floats and wish to convert to
 * rc_vector_t format for use with the other linear algebra functions.
 * This function duplicates the contents of an array of floats into vector v and
 * ensures v is sized correctly. Existing data in v (if any) is freed and lost.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_vector_from_array(rc_vector_t* v, float* ptr, int length){
+int rc_vector_from_array(rc_vector_t* v, float* ptr, int length)
+{
 	// sanity check pointer
 	if(unlikely(ptr==NULL)){
 		fprintf(stderr,"ERROR in rc_vector_from_array, received NULL pointer\n");
@@ -212,7 +220,8 @@ int rc_vector_from_array(rc_vector_t* v, float* ptr, int length){
 * to be a new rc_vector_t with a pointer to freshly-allocated memory.
 * Returns 0 on success or -1 on error.
 *******************************************************************************/
-int rc_duplicate_vector(rc_vector_t a, rc_vector_t* b){
+int rc_duplicate_vector(rc_vector_t a, rc_vector_t* b)
+{
 	// sanity check
 	if(unlikely(!a.initialized)){
 		fprintf(stderr,"ERROR in rc_duplicate_vector, a not initialized\n");
@@ -240,14 +249,15 @@ int rc_duplicate_vector(rc_vector_t a, rc_vector_t* b){
 *
 * However, we provide this function for completeness. It is not strictly
 * necessary for v to be provided as a pointer as a copy of the struct v
-* would also contain the correct pointer to the original vector's allocated 
-* memory. However, in this library we use the convention of passing an 
-* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be 
-* modified by the function, and as a normal argument when it is only to be read 
-* by the function. 
+* would also contain the correct pointer to the original vector's allocated
+* memory. However, in this library we use the convention of passing an
+* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be
+* modified by the function, and as a normal argument when it is only to be read
+* by the function.
 * Returns 0 on success or -1 on error.
 *******************************************************************************/
-int rc_set_vector_entry(rc_vector_t* v, int pos, float val){
+int rc_set_vector_entry(rc_vector_t* v, int pos, float val)
+{
 	if(unlikely(v==NULL)){
 		fprintf(stderr,"ERROR in rc_set_vector_entry, received NULL pointer\n");
 		return -1;
@@ -277,7 +287,8 @@ int rc_set_vector_entry(rc_vector_t* v, int pos, float val){
 * However, we provide this function for completeness. It also provides sanity
 * checks to avoid possible segfaults.
 *******************************************************************************/
-float rc_get_vector_entry(rc_vector_t v, int pos){
+float rc_get_vector_entry(rc_vector_t v, int pos)
+{
 	if(unlikely(!v.initialized)){
 		fprintf(stderr,"ERROR in rc_get_vector_entry, v not initialized yet\n");
 		return -1.0f;
@@ -293,12 +304,13 @@ float rc_get_vector_entry(rc_vector_t v, int pos){
 * int rc_print_vector(rc_vector_t v)
 *
 * Prints to stdout the contents of vector v in one line. This is not advisable
-* for extremely long vectors but serves for quickly debugging or printing 
-* results. It prints 4 decimal places with padding for a sign. We recommend 
+* for extremely long vectors but serves for quickly debugging or printing
+* results. It prints 4 decimal places with padding for a sign. We recommend
 * rc_print_vector_sci() for very small or very large numbers where scientific
 * notation would be more appropriate. Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_print_vector(rc_vector_t v){
+int rc_print_vector(rc_vector_t v)
+{
 	int i;
 	if(unlikely(!v.initialized)){
 		fprintf(stderr,"ERROR in rc_print_vector, vector not initialized yet\n");
@@ -313,9 +325,10 @@ int rc_print_vector(rc_vector_t v){
 * int rc_print_vector_sci(rc_vector_t v)
 *
 * Prints to stdout the contents of vector v in one line. This is not advisable
-* for extremely long vectors but serves for quickly debugging or printing 
+* for extremely long vectors but serves for quickly debugging or printing
 *******************************************************************************/
-int rc_print_vector_sci(rc_vector_t v){
+int rc_print_vector_sci(rc_vector_t v)
+{
 	int i;
 	if(unlikely(!v.initialized)){
 		fprintf(stderr,"ERROR in rc_print_vector_sci, vector not initialized yet\n");
@@ -332,14 +345,15 @@ int rc_print_vector_sci(rc_vector_t v){
 *
 * Multiplies every entry in vector v by scalar s. It is not strictly
 * necessary for v to be provided as a pointer since a copy of the struct v
-* would also contain the correct pointer to the original vector's allocated 
-* memory. However, in this library we use the convention of passing an 
-* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be 
-* modified by the function, and as a normal argument when it is only to be read 
+* would also contain the correct pointer to the original vector's allocated
+* memory. However, in this library we use the convention of passing an
+* rc_vector_t struct or rc_matrix_struct as a pointer when its data is to be
+* modified by the function, and as a normal argument when it is only to be read
 * by the function.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_vector_times_scalar(rc_vector_t* v, float s){
+int rc_vector_times_scalar(rc_vector_t* v, float s)
+{
 	int i;
 	if(unlikely(!v->initialized)){
 		fprintf(stderr,"ERROR in rc_vector_times_scalar, vector uninitialized\n");
@@ -359,7 +373,8 @@ int rc_vector_times_scalar(rc_vector_t* v, float s){
 * 2-norm which is the square root of sum of squares.
 * for infinity and -infinity norms see vector_max and vector_min
 *******************************************************************************/
-float rc_vector_norm(rc_vector_t v, float p){
+float rc_vector_norm(rc_vector_t v, float p)
+{
 	float norm = 0.0f;
 	int i;
 	if(unlikely(!v.initialized)){
@@ -389,11 +404,12 @@ float rc_vector_norm(rc_vector_t v, float p){
 /*******************************************************************************
 * int rc_vector_max(rc_vector_t v)
 *
-* Returns the index of the maximum value in v or -1 on failure. The value 
+* Returns the index of the maximum value in v or -1 on failure. The value
 * contained in the returned index is the equivalent to the infinity norm. If the
 * max value occurs multiple times then the first instance is returned.
 *******************************************************************************/
-int rc_vector_max(rc_vector_t v){
+int rc_vector_max(rc_vector_t v)
+{
 	int i;
 	int index = 0;
 	float tmp = -FLT_MAX;
@@ -414,11 +430,12 @@ int rc_vector_max(rc_vector_t v){
 /*******************************************************************************
 * int rc_vector_min(rc_vector_t v)
 *
-* Returns the index of the minimum value in v or -1 on failure. The value 
+* Returns the index of the minimum value in v or -1 on failure. The value
 * contained in the returned index is the equivalent to the minus-infinity norm.
 * If the min value occurs multiple times then the first instance is returned.
 *******************************************************************************/
-int rc_vector_min(rc_vector_t v){
+int rc_vector_min(rc_vector_t v)
+{
 	int i;
 	int index = 0;
 	float tmp = FLT_MAX;
@@ -440,7 +457,8 @@ int rc_vector_min(rc_vector_t v){
 *
 * Returns the standard deviation of the values in a vector or -1.0f on failure.
 *******************************************************************************/
-float rc_std_dev(rc_vector_t v){
+float rc_std_dev(rc_vector_t v)
+{
 	int i;
 	float mean, mean_sqr, diff;
 	if(unlikely(!v.initialized)){
@@ -467,7 +485,8 @@ float rc_std_dev(rc_vector_t v){
 *
 * Returns the mean (average) of all values in vector v or -1.0f on error.
 *******************************************************************************/
-float rc_vector_mean(rc_vector_t v){
+float rc_vector_mean(rc_vector_t v)
+{
 	int i;
 	float sum = 0.0f;
 	if(unlikely(!v.initialized)){
@@ -485,7 +504,8 @@ float rc_vector_mean(rc_vector_t v){
 * Populates vector p with the projection of vector v onto e.
 * Returns 0 on success, otherwise -1.
 *******************************************************************************/
-int rc_vector_projection(rc_vector_t v, rc_vector_t e, rc_vector_t* p){
+int rc_vector_projection(rc_vector_t v, rc_vector_t e, rc_vector_t* p)
+{
 	int i;
 	float factor;
 	// sanity checks
@@ -512,7 +532,8 @@ int rc_vector_projection(rc_vector_t v, rc_vector_t e, rc_vector_t* p){
 * Returns the dot product of two equal-length vectors or floating-point -1.0f
 * on error.
 *******************************************************************************/
-float rc_vector_dot_product(rc_vector_t v1, rc_vector_t v2){
+float rc_vector_dot_product(rc_vector_t v1, rc_vector_t v2)
+{
 	if(unlikely(!v1.initialized || !v2.initialized)){
 		fprintf(stderr,"ERROR in rc_vector_dot_product, vector uninitialized\n");
 		return -1.0f;
@@ -531,7 +552,8 @@ float rc_vector_dot_product(rc_vector_t v1, rc_vector_t v2){
 * placed in vector p and and existing memory used by p is freed and lost.
 * Returns 0 on success, otherwise -1.
 *******************************************************************************/
-int rc_vector_cross_product(rc_vector_t v1, rc_vector_t v2, rc_vector_t* p){
+int rc_vector_cross_product(rc_vector_t v1, rc_vector_t v2, rc_vector_t* p)
+{
 	// sanity checks
 	if(unlikely(!v1.initialized || !v2.initialized)){
 		fprintf(stderr,"ERROR in rc_vector_cross_product, vector not initialized yet.\n");
@@ -548,7 +570,7 @@ int rc_vector_cross_product(rc_vector_t v1, rc_vector_t v2, rc_vector_t* p){
 	p->d[0] = (v1.d[1]*v2.d[2]) - (v1.d[2]*v2.d[1]);
 	p->d[1] = (v1.d[2]*v2.d[0]) - (v1.d[0]*v2.d[2]);
 	p->d[2] = (v1.d[0]*v2.d[1]) - (v1.d[1]*v2.d[0]);
-	return 0;	
+	return 0;
 }
 
 
@@ -559,7 +581,8 @@ int rc_vector_cross_product(rc_vector_t v1, rc_vector_t v2, rc_vector_t* p){
 * allocated for s is freed and lost, new memory is allocated if necessary.
 * Returns 0 on success, otherwise -1.
 *******************************************************************************/
-int rc_vector_sum(rc_vector_t v1, rc_vector_t v2, rc_vector_t* s){
+int rc_vector_sum(rc_vector_t v1, rc_vector_t v2, rc_vector_t* s)
+{
 	int i;
 	// sanity checks
 	if(unlikely(!v1.initialized || !v2.initialized)){
@@ -585,7 +608,8 @@ int rc_vector_sum(rc_vector_t v1, rc_vector_t v2, rc_vector_t* s){
 * are lost and v2 is left untouched.
 * Returns 0 on success, otherwise -1.
 *******************************************************************************/
-int rc_vector_sum_inplace(rc_vector_t* v1, rc_vector_t v2){
+int rc_vector_sum_inplace(rc_vector_t* v1, rc_vector_t v2)
+{
 	int i;
 	// sanity checks
 	if(unlikely(!v1->initialized || !v2.initialized)){
