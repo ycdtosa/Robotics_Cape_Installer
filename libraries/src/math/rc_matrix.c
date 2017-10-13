@@ -394,7 +394,7 @@ int rc_multiply_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C)
 		fprintf(stderr,"ERROR in rc_multiply_matrices, matrix not initialized\n");
 		return -1;
 	}
-	if(unlikely(A.cols!=B.rows)) {
+	if(unlikely(A.cols!=B.rows)){
 		fprintf(stderr,"ERROR in rc_multiply_matrices, dimension mismatch\n");
 		return -1;
 	}
@@ -433,6 +433,15 @@ int rc_multiply_matrices(rc_matrix_t A, rc_matrix_t B, rc_matrix_t* C)
 int rc_left_multiply_matrix_inplace(rc_matrix_t A, rc_matrix_t* B)
 {
 	rc_matrix_t tmp = rc_empty_matrix();
+	// Sanity Checks
+	if(unlikely(!A.initialized||!B->initialized)){
+		fprintf(stderr,"ERROR in rc_left_multiply_matrix_inplace, matrix not initialized\n");
+		return -1;
+	}
+	if(unlikely(A.cols!=B->rows)){
+		fprintf(stderr,"ERROR in rc_left_multiply_matrix_inplace, dimension mismatch\n");
+		return -1;
+	}
 	// use the normal multiply function which will allocate memory for tmp
 	if(rc_multiply_matrices(A, *B, &tmp)){
 		fprintf(stderr,"ERROR in rc_left_multiply_matrix_inplace, failed to multiply\n");
@@ -454,6 +463,15 @@ int rc_left_multiply_matrix_inplace(rc_matrix_t A, rc_matrix_t* B)
 int rc_right_multiply_matrix_inplace(rc_matrix_t* A, rc_matrix_t B)
 {
 	rc_matrix_t tmp = rc_empty_matrix();
+	// Sanity Checks
+	if(unlikely(!A->initialized||!B.initialized)){
+		fprintf(stderr,"ERROR in rc_right_multiply_matrix_inplace, matrix not initialized\n");
+		return -1;
+	}
+	if(unlikely(A->cols!=B.rows)){
+		fprintf(stderr,"ERROR in rc_right_multiply_matrix_inplace, dimension mismatch\n");
+		return -1;
+	}
 	if(rc_multiply_matrices(*A, B, &tmp)){
 		fprintf(stderr,"ERROR in rc_right_multiply_matrix_inplace, failed to multiply\n");
 		rc_free_matrix(&tmp);
