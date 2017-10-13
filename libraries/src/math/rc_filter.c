@@ -12,9 +12,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include <rc/other/preprocessor_macros.h>
-#include <rc/math/filter.h>
-#include <rc/math/polynomial.h>
+#include "rc/other/preprocessor_macros.h"
+#include "rc/math/filter.h"
+#include "rc/math/polynomial.h"
 
 /*******************************************************************************
 * int rc_alloc_filter(rc_filter_t* f, rc_vector_t num, rc_vector_t den, float dt)

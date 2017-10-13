@@ -10,9 +10,9 @@
 #include <math.h>	// for sqrt, pow, etc
 #include <string.h>	// for memcpy
 
-#include <rc/math/algebra_common.h>
-#include <rc/math/vector.h>
-#include <rc/math/matrix.h>
+#include "rc/math/algebra_common.h"
+#include "rc/math/vector.h"
+#include "rc/math/matrix.h"
 
 /*******************************************************************************
 * int rc_matrix_times_col_vec(rc_matrix_t A, rc_vector_t v, rc_vector_t* c)
@@ -23,7 +23,8 @@
 * in their definitions are they actually specified as one or the other.
 * Returns 0 on success and -1 on failure.
 *******************************************************************************/
-int rc_matrix_times_col_vec(rc_matrix_t A, rc_vector_t v, rc_vector_t* c){
+int rc_matrix_times_col_vec(rc_matrix_t A, rc_vector_t v, rc_vector_t* c)
+{
 	int i;
 	// sanity checks
 	if(unlikely(!A.initialized || !v.initialized)){
@@ -52,7 +53,8 @@ int rc_matrix_times_col_vec(rc_matrix_t A, rc_vector_t v, rc_vector_t* c){
 * in their definitions are they actually specified as one or the other.
 * Returns 0 on success and -1 on failure.
 *******************************************************************************/
-int rc_row_vec_times_matrix(rc_vector_t v, rc_matrix_t A, rc_vector_t* c){
+int rc_row_vec_times_matrix(rc_vector_t v, rc_matrix_t A, rc_vector_t* c)
+{
 	int i,j;
 	float* tmp;
 	// sanity checks
@@ -64,7 +66,7 @@ int rc_row_vec_times_matrix(rc_vector_t v, rc_matrix_t A, rc_vector_t* c){
 		fprintf(stderr,"ERROR in rc_row_vec_times_matrix, dimension mismatch\n");
 		return -1;
 	}
-	// allocate memory for a column of A from the stack, this is faster than 
+	// allocate memory for a column of A from the stack, this is faster than
 	// malloc and the memory is freed automatically when this function returns
 	// it is faster to put a column of A in contiguous memory then multiply
 	tmp = alloca(A.rows*sizeof(float));
@@ -92,7 +94,8 @@ int rc_row_vec_times_matrix(rc_vector_t v, rc_matrix_t A, rc_vector_t* c){
 *
 * Returns the determinant of square matrix A or -1.0f on failure.
 *******************************************************************************/
-float rc_matrix_determinant(rc_matrix_t A){
+float rc_matrix_determinant(rc_matrix_t A)
+{
 	int i,j,k;
 	float ratio, det;
 	rc_matrix_t tmp = rc_empty_matrix();
@@ -136,7 +139,8 @@ float rc_matrix_determinant(rc_matrix_t A){
 * contents of LUP (if any) are freed and LUP are resized appropriately.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_lup_decomp(rc_matrix_t A, rc_matrix_t* L, rc_matrix_t* U, rc_matrix_t* P){
+int rc_lup_decomp(rc_matrix_t A, rc_matrix_t* L, rc_matrix_t* U, rc_matrix_t* P)
+{
 	int i,j,k,m,index,tmpint;
 	float s1, s2;
 	int* ptmp;
@@ -227,11 +231,12 @@ int rc_lup_decomp(rc_matrix_t A, rc_matrix_t* L, rc_matrix_t* U, rc_matrix_t* P)
 /*******************************************************************************
 * int qr_multiply_q_right(rc_matrix_t* A, rc_matrix_t x)
 *
-* performs a right matrix multiplication of x on the bottom right minor of A 
+* performs a right matrix multiplication of x on the bottom right minor of A
 * where x is smaller than or equal to the size of A. Only used here in the
 * backend, not for user access.
 *******************************************************************************/
-int qr_multiply_q_right(rc_matrix_t* A, rc_matrix_t x){
+int qr_multiply_q_right(rc_matrix_t* A, rc_matrix_t x)
+{
 	int i,j,k,q;
 	rc_matrix_t tmp = rc_empty_matrix();
 	float* col;
@@ -255,7 +260,7 @@ int qr_multiply_q_right(rc_matrix_t* A, rc_matrix_t x){
 			tmp.d[i][j]=A->d[i][j+q];
 		}
 	}
-	// allocate memory for a column of tmp from the stack, this is faster than 
+	// allocate memory for a column of tmp from the stack, this is faster than
 	// malloc and the memory is freed automatically when this function returns
 	// it is faster to put a column in contiguous memory before multiplying
 	col = alloca(x.rows*sizeof(float));
@@ -264,7 +269,7 @@ int qr_multiply_q_right(rc_matrix_t* A, rc_matrix_t x){
 		rc_free_matrix(&tmp);
 		return -1;
 	}
-	// do the multiplication, overwriting A left q columns of A remain untouched 
+	// do the multiplication, overwriting A left q columns of A remain untouched
 	for(j=0;j<(A->cols-q);j++){
 		// put column of x in sequential memory slot
 		for(k=0;k<x.rows;k++) col[k]=x.d[k][j];
@@ -282,11 +287,12 @@ int qr_multiply_q_right(rc_matrix_t* A, rc_matrix_t x){
 /*******************************************************************************
 * int qr_multiply_r_left(rc_matrix_t x, rc_matrix_t* Am, float norm)
 *
-* performs a left matrix multiplication of x on the bottom right minor of A 
+* performs a left matrix multiplication of x on the bottom right minor of A
 * where x is smaller than or equal to the size of A. Only used here in the
 * backend, not for user access.
 *******************************************************************************/
-int qr_multiply_r_left(rc_matrix_t H, rc_matrix_t* R, float norm){
+int qr_multiply_r_left(rc_matrix_t H, rc_matrix_t* R, float norm)
+{
 	int i,j,p;
 	rc_matrix_t tmp = rc_empty_matrix();
 	// sanity checks
@@ -299,8 +305,8 @@ int qr_multiply_r_left(rc_matrix_t H, rc_matrix_t* R, float norm){
 		return -1;
 	}
 	// p is the index of A defining the top left corner of the operation
-	// p=q=0 if x is same size as A', 
-	p=R->rows-H.rows; 
+	// p=q=0 if x is same size as A',
+	p=R->rows-H.rows;
 	//q=R->cols-H.cols;
 	// alloc memory for a duplicate the subset of A to be operated on
 	if(unlikely(rc_alloc_matrix(&tmp, R->cols-p, R->rows-p))){
@@ -318,7 +324,7 @@ int qr_multiply_r_left(rc_matrix_t H, rc_matrix_t* R, float norm){
 	// modifying. as H shrinks, only the lower rows need modifying
 	for(i=0;i<(R->rows-p);i++){
 		// we know first column of R will be mostly zeros, so fill in zeros
-		// or known norm where possible. we use p to 
+		// or known norm where possible. we use p to
 		if(i==0)	R->d[i+p][p]=norm;
 		else		R->d[i+p][p]=0.0f;
 		// do multiplication for the rest of the columns
@@ -339,7 +345,8 @@ int qr_multiply_r_left(rc_matrix_t H, rc_matrix_t* R, float norm){
 * where u=x-ae1, v=u/norm(u), H=I-(2/norm(x))vv'
 * warning! modifies x!, only for use by qr decomposition below
 *******************************************************************************/
-rc_matrix_t qr_householder_matrix(rc_vector_t x, float* new_norm){
+rc_matrix_t qr_householder_matrix(rc_vector_t x, float* new_norm)
+{
 	int i, j;
 	float norm, tau, taui, dot;
 	rc_matrix_t out = rc_empty_matrix();
@@ -399,7 +406,8 @@ rc_matrix_t qr_householder_matrix(rc_vector_t x, float* new_norm){
 * Uses householder reflection method to find the QR decomposition of A.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_qr_decomp(rc_matrix_t A, rc_matrix_t* Q, rc_matrix_t* R){
+int rc_qr_decomp(rc_matrix_t A, rc_matrix_t* Q, rc_matrix_t* R)
+{
 	int i,j,steps;
 	float norm;
 	rc_vector_t x = rc_empty_vector();
@@ -446,7 +454,8 @@ int rc_qr_decomp(rc_matrix_t A, rc_matrix_t* Q, rc_matrix_t* R){
 * contents are overwritten. Returns 0 on success or -1 on failure such as if
 * matrix A is not invertible.
 *******************************************************************************/
-int rc_invert_matrix(rc_matrix_t A, rc_matrix_t* Ainv){
+int rc_invert_matrix(rc_matrix_t A, rc_matrix_t* Ainv)
+{
 	int i,j,k;
 	rc_matrix_t L = rc_empty_matrix();
 	rc_matrix_t U = rc_empty_matrix();
@@ -510,7 +519,7 @@ int rc_invert_matrix(rc_matrix_t A, rc_matrix_t* Ainv){
 		fprintf(stderr,"ERROR in rc_matrix_inverse, failed to multiply matrix\n");
 		i=-1;
 	}
-	// free allocation	
+	// free allocation
 	rc_free_matrix(&tmp);
 	rc_free_matrix(&P);
 	return i;
@@ -522,7 +531,8 @@ int rc_invert_matrix(rc_matrix_t A, rc_matrix_t* Ainv){
 * Inverts Matrix A in place. The original contents of A are lost.
 * Returns 0 on success or -1 on failure such as if A is not invertible.
 *******************************************************************************/
-int rc_invert_matrix_inplace(rc_matrix_t* A){
+int rc_invert_matrix_inplace(rc_matrix_t* A)
+{
 	rc_matrix_t Atmp = rc_empty_matrix();
 	if(unlikely(rc_invert_matrix(*A,&Atmp))){
 		fprintf(stderr, "ERROR in rc_invert_matrix_inplace, failed to invert\n");
@@ -543,7 +553,8 @@ int rc_invert_matrix_inplace(rc_matrix_t* A){
 * adapted here for RC use and includes better detection of unsolvable systems.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_lin_system_solve(rc_matrix_t A, rc_vector_t b, rc_vector_t* x){
+int rc_lin_system_solve(rc_matrix_t A, rc_vector_t b, rc_vector_t* x)
+{
 	float fMaxElem, fAcc;
 	int nDim,i,j,k,m;
 	rc_matrix_t Atemp = rc_empty_matrix();
@@ -612,7 +623,7 @@ int rc_lin_system_solve(rc_matrix_t A, rc_vector_t b, rc_vector_t* x){
 				Atemp.d[j][i]=Atemp.d[j][i]+fAcc*Atemp.d[k][i];
 			}
 			// free member recalculation
-			btemp.d[j] = btemp.d[j] + (fAcc*btemp.d[k]); 
+			btemp.d[j] = btemp.d[j] + (fAcc*btemp.d[k]);
 		}
 	}
 	// now run up the upper diagonal matrix solving for x
@@ -631,10 +642,11 @@ int rc_lin_system_solve(rc_matrix_t A, rc_vector_t b, rc_vector_t* x){
 * int rc_lin_system_solve_qr(rc_matrix_t A, rc_vector_t b, rc_vector_t* x)
 *
 * Finds a least-squares solution to the system Ax=b for non-square A using QR
-* decomposition method and places the solution in x. 
+* decomposition method and places the solution in x.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_lin_system_solve_qr(rc_matrix_t A, rc_vector_t b, rc_vector_t* x){
+int rc_lin_system_solve_qr(rc_matrix_t A, rc_vector_t b, rc_vector_t* x)
+{
 	int i,k;
 	rc_vector_t temp = rc_empty_vector();
 	rc_matrix_t Q = rc_empty_matrix();
@@ -688,7 +700,7 @@ int rc_lin_system_solve_qr(rc_matrix_t A, rc_vector_t b, rc_vector_t* x){
 * fitted ellipsoid align with the global coordinate system. Therefore there are
 * 6 degrees of freedom defining the ellipsoid: the x,y,z coordinates of the
 * centroid and the lengths from the centroid to the surface in each of the 3
-* directions. 
+* directions.
 *
 * rc_matrix_t 'pts' is a tall matrix with 3 columns and at least 6 rows.
 * Each row must contain the x,y&z components of each individual point to be fit.
@@ -699,9 +711,10 @@ int rc_lin_system_solve_qr(rc_matrix_t A, rc_vector_t b, rc_vector_t* x){
 * the lengths or radius from the centroid to the surface along each axis will
 * be placed in the vector 'lens'
 *
-* Returns 0 on success or -1 on failure. 
+* Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_fit_ellipsoid(rc_matrix_t pts, rc_vector_t* ctr, rc_vector_t* lens){
+int rc_fit_ellipsoid(rc_matrix_t pts, rc_vector_t* ctr, rc_vector_t* lens)
+{
 	int i,p;
 	rc_matrix_t A = rc_empty_matrix();
 	rc_vector_t b = rc_empty_vector();
@@ -750,8 +763,8 @@ int rc_fit_ellipsoid(rc_matrix_t pts, rc_vector_t* ctr, rc_vector_t* lens){
 	// done with A&b now
 	rc_free_matrix(&A);
 	rc_free_vector(&b);
-	
-	// compute center 
+
+	// compute center
 	if(unlikely(rc_alloc_vector(ctr,3))){
 		fprintf(stderr,"ERROR in rc_fit_ellipsoid, failed to allocate ctr\n");
 		rc_free_vector(&f);
@@ -760,7 +773,7 @@ int rc_fit_ellipsoid(rc_matrix_t pts, rc_vector_t* ctr, rc_vector_t* lens){
 	ctr->d[0] = -f.d[1]/(2.0f*f.d[0]);
 	ctr->d[1] = -f.d[3]/(2.0f*f.d[2]);
 	ctr->d[2] = -f.d[5]/(2.0f*f.d[4]);
-	
+
 	// Solve for lengths
 	if(unlikely(rc_alloc_vector(&b,3))){
 		fprintf(stderr,"ERROR in rc_fit_ellipsoid, failed to alloc vector\n");
