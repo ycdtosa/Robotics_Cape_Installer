@@ -7,7 +7,7 @@
 * suited for storing the last n values in a discrete time filter.
 *
 * The user creates their own instance of a buffer and passes a pointer to the
-* these ringbuf functions to perform normal operations. 
+* these ringbuf functions to perform normal operations.
 *******************************************************************************/
 
 #include <stdio.h>
@@ -15,10 +15,8 @@
 #include <string.h>
 #include <math.h>
 
-//#include "../roboticscape.h"
-
-#include <rc/other/preprocessor_macros.h>
-#include <rc/math/ring_buffer.h>
+#include "rc/other/preprocessor_macros.h"
+#include "rc/math/ring_buffer.h"
 
 /*******************************************************************************
 * int rc_alloc_ringbuf(rc_ringbuf_t* buf, int size)
@@ -28,7 +26,8 @@
 * Otherwise any existing memory allocated for buf is free'd to avoid memory
 * leaks and new memory is allocated. Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_alloc_ringbuf(rc_ringbuf_t* buf, int size){
+int rc_alloc_ringbuf(rc_ringbuf_t* buf, int size)
+{
 	// sanity checks
 	if(unlikely(buf==NULL)){
 		fprintf(stderr,"ERROR in rc_alloc_ringbuf, received NULL pointer\n");
@@ -66,7 +65,8 @@ int rc_alloc_ringbuf(rc_ringbuf_t* buf, int size){
 * the struct to contain problematic contents leading to segfaults. New ring
 * buffers should be initialized with this before calling rc_alloc_ringbuf.
 *******************************************************************************/
-rc_ringbuf_t rc_empty_ringbuf(){
+rc_ringbuf_t rc_empty_ringbuf()
+{
 	rc_ringbuf_t out;
 	// zero-out piecemeal instead of with memset to avoid issues with padding
 	out.d=NULL;
@@ -83,7 +83,8 @@ rc_ringbuf_t rc_empty_ringbuf(){
 * so other functions don't try to access unallocated memory.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_free_ringbuf(rc_ringbuf_t* buf){
+int rc_free_ringbuf(rc_ringbuf_t* buf)
+{
 	if(unlikely(buf==NULL)){
 		fprintf(stderr, "ERROR in rc_free_ringbuf, received NULL pointer\n");
 		return -1;
@@ -99,7 +100,8 @@ int rc_free_ringbuf(rc_ringbuf_t* buf){
 * Sets all values in the buffer to 0 and sets the buffer index back to 0.
 * Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_reset_ringbuf(rc_ringbuf_t* buf){
+int rc_reset_ringbuf(rc_ringbuf_t* buf)
+{
 	if(unlikely(buf==NULL)){
 		fprintf(stderr, "ERROR in rc_reset_ringbuf, received NULL pointer\n");
 		return -1;
@@ -115,12 +117,13 @@ int rc_reset_ringbuf(rc_ringbuf_t* buf){
 
 /*******************************************************************************
 * int rc_insert_new_ringbuf_value(rc_ringbuf_t* buf, float val)
-* 
+*
 * Puts a new float into the ring buffer and updates the index accordingly.
 * If the buffer was full then the oldest value in the buffer is automatically
 * removed. Returns 0 on success or -1 on failure.
 *******************************************************************************/
-int rc_insert_new_ringbuf_value(rc_ringbuf_t* buf, float val){
+int rc_insert_new_ringbuf_value(rc_ringbuf_t* buf, float val)
+{
 	int new_index;
 	// sanity checks
 	if(unlikely(buf==NULL)){
@@ -143,12 +146,13 @@ int rc_insert_new_ringbuf_value(rc_ringbuf_t* buf, float val){
 /*******************************************************************************
 * float rc_get_ringbuf_value(rc_ringbuf_t* buf, int pos)
 *
-* Returns the float which is 'pos' steps behind the last value added to the 
-* buffer. If 'position' is given as 0 then the most recent value is returned. 
+* Returns the float which is 'pos' steps behind the last value added to the
+* buffer. If 'position' is given as 0 then the most recent value is returned.
 * Position 'pos' obviously can't be larger than the buffer size minus 1.
 * Prints an error message and return -1.0f on error.
 *******************************************************************************/
-float rc_get_ringbuf_value(rc_ringbuf_t* buf, int pos){
+float rc_get_ringbuf_value(rc_ringbuf_t* buf, int pos)
+{
 	int return_index;
 	// sanity checks
 	if(unlikely(buf==NULL)){
@@ -174,13 +178,16 @@ float rc_get_ringbuf_value(rc_ringbuf_t* buf, int pos){
 *
 * Returns the standard deviation of the values in the ring buffer.
 *******************************************************************************/
-float rc_std_dev_ringbuf(rc_ringbuf_t buf){
+float rc_std_dev_ringbuf(rc_ringbuf_t buf)
+{
 	int i;
 	float mean, mean_sqr, diff;
 	if(unlikely(!buf.initialized)){
 		fprintf(stderr,"ERROR in rc_std_dev_ringbuf, ringbuf not initialized yet\n");
 		return -1.0f;
 	}
+	// shortcut if buffer is of length 1
+	if(buf.size == 1) return 0.0f;
 	// calculate mean
 	mean = 0.0f;
 	for(i=0;i<buf.size;i++) mean+=buf.d[i];
@@ -191,7 +198,7 @@ float rc_std_dev_ringbuf(rc_ringbuf_t buf){
 		diff = buf.d[i]-mean;
 		mean_sqr += diff*diff;
 	}
-	return sqrt(mean_sqr/(float)buf.size);
+	return sqrt(mean_sqr/(float)(buf.size-1));
 }
 
 
