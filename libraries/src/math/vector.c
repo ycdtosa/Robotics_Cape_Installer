@@ -10,10 +10,9 @@
 #include <math.h>	// for sqrt, pow, etc
 #include <float.h>	// for FLT_MAX
 
-#include <rc/other/other.h>
-
-#include <rc/math/vector.h>
-#include <rc/math/algebra_common.h>
+#include "rc/other/other.h"
+#include "rc/math/vector.h"
+#include "rc/math/algebra_common.h"
 
 /*******************************************************************************
 * int rc_alloc_vector(rc_vector_t* v, int length)
