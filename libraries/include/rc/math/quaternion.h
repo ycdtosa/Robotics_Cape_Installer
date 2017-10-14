@@ -110,8 +110,10 @@
 *
 * @ int rc_quaternion_to_rotation_matrix(rc_vector_t q, rc_matrix_t* m)
 *
-* Populates m with a 3x3 rotation matrix which would perform the equivalent
-* rotation as quaternion q when multiplied by a 3D vector. If m is already
+* Populates m with a 3x3 orthogonal rotation matrix, q must be normalized!
+* The orthogonal matrix corresponds to a rotation by the unit quaternion q
+* when post-multiplied with a column vector as such: v_rotated=mv
+* If m is already
 * 3x3 then its contents are overwritten, otherwise its existing memory is freed
 * and new memory is allocated.
 * Returns 0 on success or -1 on failure.
