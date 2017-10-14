@@ -24,14 +24,14 @@
 *
 * A button state can be either RELEASED or PRESSED as defined by this enum.
 *
-* @ int rc_initialize_button_handlers()
+* @ int rc_initialize_buttons()
 *
 * This initializes the pins and gpio button handler for the pause and mode
 * buttons. This is done already in rc_initialize() but exists here if you wish
 * to use the button handlers independently from other functionality. Returns 0
 * on success or -1 on failure.
 *
-* @ void rc_stop_button_handlers()
+* @ void rc_stop_buttons()
 *
 * This tells the button handler threads to stop. It will return immediately.
 *
@@ -71,8 +71,8 @@ typedef enum rc_button_state_t {
 	PRESSED
 } rc_button_state_t;
 
-int rc_initialize_button_handlers();
-void rc_stop_button_handlers();
+int rc_initialize_buttons();
+void rc_stop_buttons();
 int rc_wait_for_button_handlers_to_join();
 
 int rc_set_pause_pressed_func(void (*func)(void));
@@ -81,5 +81,7 @@ int rc_set_mode_pressed_func(void (*func)(void));
 int rc_set_mode_released_func(void (*func)(void));
 rc_button_state_t rc_get_pause_button();
 rc_button_state_t rc_get_mode_button();
+int rc_wait_for_pause_press();
+int rc_wait_for_mode_press();
 
 #endif // RC_BUTTONS_H

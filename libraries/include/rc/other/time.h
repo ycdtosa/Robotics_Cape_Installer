@@ -74,6 +74,7 @@
 #ifndef RC_TIME_H
 #define RC_TIME_H
 
+#include <stdint.h>
 #include <time.h>	// for timespec
 #include <sys/time.h>	// for timeval
 
