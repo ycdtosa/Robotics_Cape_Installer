@@ -520,8 +520,10 @@ void rc_quaternion_rotate_vector_array(float v[3], float q[4])
 /*******************************************************************************
 * int rc_quaternion_to_rotation_matrix(rc_vector_t q, rc_matrix_t* m)
 *
-* Populates m with a 3x3 rotation matrix which would perform the equivalent
-* rotation as quaternion q when multiplied by a 3D vector. If m is already
+* Populates m with a 3x3 orthogonal rotation matrix, q must be normalized!
+* The orthogonal matrix corresponds to a rotation by the unit quaternion q
+* when post-multiplied with a column vector as such: v_rotated=mv
+* If m is already
 * 3x3 then its contents are overwritten, otherwise its existing memory is freed
 * and new memory is allocated.
 * Returns 0 on success or -1 on failure.
@@ -547,17 +549,17 @@ int rc_quaternion_to_rotation_matrix(rc_vector_t q, rc_matrix_t* m)
 	q1s = q.d[1]*q.d[1];
 	q2s = q.d[2]*q.d[2];
 	q3s = q.d[3]*q.d[3];
-	// compute diagonal entries
+	// diagonal entries
 	m->d[0][0] = q0s+q1s-q2s-q3s;
 	m->d[1][1] = q0s-q1s+q2s-q3s;
 	m->d[2][2] = q0s-q1s-q2s+q3s;
-	// compute upper triangle
+	// upper triangle
 	m->d[0][1] = 2.0f * (q.d[1]*q.d[2] - q.d[0]*q.d[3]);
 	m->d[0][2] = 2.0f * (q.d[1]*q.d[3] + q.d[0]*q.d[2]);
 	m->d[1][2] = 2.0f * (q.d[2]*q.d[3] - q.d[0]*q.d[1]);
-	// mirror lower triangle
-	m->d[1][0] = m->d[0][1];
-	m->d[2][0] = m->d[0][2];
-	m->d[2][1] = m->d[1][2];
+	// lower triangle
+	m->d[1][0] = 2.0f * (q.d[1]*q.d[2] + q.d[0]*q.d[3]);
+	m->d[2][0] = 2.0f * (q.d[1]*q.d[3] - q.d[0]*q.d[2]);
+	m->d[2][1] = 2.0f * (q.d[2]*q.d[3] + q.d[0]*q.d[1]);
 	return 0;
 }
