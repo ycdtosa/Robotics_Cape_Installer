@@ -35,7 +35,7 @@
 *
 * This tells the button handler threads to stop. It will return immediately.
 *
-* @ int rc_wait_for_button_handlers_to_join()
+* @ int rc_cleanup_buttons()
 *
 * After stopping the button handlers, you may wish to wait for the threads to
 * stop cleanly before continuing your program flow. This wait function will
@@ -66,22 +66,42 @@
 *
 * See the rc_blink and rc_test_buttons example programs for sample use cases.
 ******************************************************************************/
+#include "rc/other/preprocessor_macros.h"
+
+// state enumerated type
 typedef enum rc_button_state_t {
 	RELEASED,
 	PRESSED
 } rc_button_state_t;
 
+// button enumerated type
+typedef enum rc_button_t {
+	PAUSE,
+	MODE
+} rc_button_t;
+
+// initialize and cleanup
 int rc_initialize_buttons();
 void rc_stop_buttons();
-int rc_wait_for_button_handlers_to_join();
+int rc_wait_for_button_cleanup();
 
+// general functions
+int rc_set_button_callback(rc_button_t button, rc_button_state_t state,void (*func)(void));
+rc_button_state_t rc_get_button_state(rc_button_t button);
+int rc_wait_for_button(rc_button_t button, rc_button_state_t state);
+
+
+
+// deprecated callback function initializers
 int rc_set_pause_pressed_func(void (*func)(void));
 int rc_set_pause_released_func(void (*func)(void));
 int rc_set_mode_pressed_func(void (*func)(void));
 int rc_set_mode_released_func(void (*func)(void));
+
+// deprecated state functions
 rc_button_state_t rc_get_pause_button();
 rc_button_state_t rc_get_mode_button();
-int rc_wait_for_pause_press();
-int rc_wait_for_mode_press();
+
+
 
 #endif // RC_BUTTONS_H

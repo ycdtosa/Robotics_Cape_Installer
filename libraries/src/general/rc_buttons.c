@@ -22,43 +22,52 @@
 #define POLL_BUF_LEN 1024
 #define POLL_TIMEOUT 100 /* 0.1 seconds */
 
+
 // placeholder for button functions
 // this is also in other/other.h but is so small we redefine it here to reduce
 // the number of dependencies
 static void rc_null_func();
 
 // function pointers for button handlers
-static void (*pause_pressed_func)(void)		= &rc_null_func;
-static void (*pause_released_func)(void)	= &rc_null_func;
-static void (*mode_pressed_func)(void)		= &rc_null_func;
-static void (*mode_released_func)(void)		= &rc_null_func;
+static void (*pause_press_func)(void)		= &rc_null_func;
+static void (*pause_release_func)(void)		= &rc_null_func;
+static void (*mode_press_func)(void)		= &rc_null_func;
+static void (*mode_release_func)(void)		= &rc_null_func;
 
 // mutex to allow blocking on button press
 static pthread_mutex_t pause_press_mutex	= PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t pause_releas_mutex	= PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t pause_release_mutex	= PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t mode_press_mutex		= PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t mode_releas_mutex	= PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mode_release_mutex	= PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t pause_press_condition	= PTHREAD_COND_INITIALIZER;
-static pthread_cond_t pause_releas_condition	= PTHREAD_COND_INITIALIZER;
+static pthread_cond_t pause_release_condition	= PTHREAD_COND_INITIALIZER;
 static pthread_cond_t mode_press_condition	= PTHREAD_COND_INITIALIZER;
-static pthread_cond_t mode_releas_condition	= PTHREAD_COND_INITIALIZER;
+static pthread_cond_t mode_release_condition	= PTHREAD_COND_INITIALIZER;
 
 
 // local thread function declarations
-static void* pause_pressed_handler(void* ptr);
-static void* pause_released_handler(void* ptr);
-static void* mode_pressed_handler(void* ptr);
-static void* mode_released_handler(void* ptr);
+static void* pause_press_handler(void* ptr);
+static void* pause_release_handler(void* ptr);
+static void* mode_press_handler(void* ptr);
+static void* mode_release_handler(void* ptr);
 
 // local thread structs
-static pthread_t pause_pressed_thread;
-static pthread_t pause_released_thread;
-static pthread_t mode_pressed_thread;
-static pthread_t mode_released_thread;
+static pthread_t pause_press_thread;
+static pthread_t pause_release_thread;
+static pthread_t mode_press_thread;
+static pthread_t mode_release_thread;
 
 // state variables
 static int initialized_flag = 0;	// set to 1 but initialize_buttons
 static int shutdown_flag = 0;		// set to 1 by rc_stop_buttons
+
+// modes for the watch threads to run in
+typedef enum thread_mode_t {
+	PAUSE_PRESS,
+	PAUSE_RELEASE,
+	MODE_PRESS,
+	MODE_RELEASE
+} thread_mode_t;
 
 
 /*******************************************************************************
@@ -79,29 +88,47 @@ static void rc_null_func(){
 *******************************************************************************/
 int initialize_buttons()
 {
-	#ifdef DEBUG
-	printf("setting pause_pressed function\n");
-	#endif
-	rc_set_pause_pressed_func(&rc_null_func);
+	thread_mode_t mode;
+	// basic gpio setup
+	if(rc_gpio_export(PAUSE_BTN)){
+		fprintf(stderr,"ERROR: Failed to export gpio pin %d\n", PAUSE_BTN);
+		return -1;
+	}
+	if(rc_gpio_set_dir(PAUSE_BTN, INPUT_PIN)){
+		fprintf(stderr,"ERROR: Failed to set gpio pin %d as output\n", PAUSE_BTN);
+		return -1;
+	}
+	if(rc_gpio_export(MODE_BTN)){
+		fprintf(stderr,"ERROR: Failed to export gpio pin %d\n", MODE_BTN);
+		return -1;
+	}
+	if(rc_gpio_set_dir(MODE_BTN, INPUT_PIN)){
+		fprintf(stderr,"ERROR: Failed to set gpio pin %d as output\n", MODE_BTN);
+		return -1;
+	}
+	rc_gpio_set_edge(MODE_BTN, EDGE_BOTH);
+	rc_gpio_set_edge(PAUSE_BTN, EDGE_BOTH);
 
+	// wipe the callback functions
 	#ifdef DEBUG
-	printf("setting remaining button functions\n");
+	printf("setting defualt callback function\n");
 	#endif
-	rc_set_pause_released_func(&rc_null_func);
-	rc_set_mode_pressed_func(&rc_null_func);
-	rc_set_mode_released_func(&rc_null_func);
+	rc_set_button_callback(PAUSE,PRESSED,&rc_null_func);
+	rc_set_button_callback(PAUSE,RELEASED,&rc_null_func);
+	rc_set_button_callback(MODE,PRESSED,&rc_null_func);
+	rc_set_button_callback(MODE,RELEASED,&rc_null_func);
 
 	#ifdef DEBUG
 	printf("starting button threads\n");
 	#endif
-	pthread_create(&pause_pressed_thread, NULL, pause_pressed_handler,\
-								(void*) NULL);
-	pthread_create(&pause_released_thread, NULL, pause_released_handler,\
-								(void*) NULL);
-	pthread_create(&mode_pressed_thread, NULL, mode_pressed_handler,\
-								(void*) NULL);
-	pthread_create(&mode_released_thread, NULL, mode_released_handler,\
-								(void*) NULL);
+	mode=PAUSE_PRESS;
+	pthread_create(&pause_press_thread, NULL, button_handler,(void*)mode);
+	mode=PAUSE_release;
+	pthread_create(&pause_release_thread, NULL, button_handler,(void*)mode);
+	mode=MODE_PRESS;
+	pthread_create(&mode_press_thread, NULL, button_handler,(void*)mode);
+	mode=MODE_RELEASE;
+	pthread_create(&mode_release_thread, NULL, button_handler,(void*)mode);
 
 	// apply priority to all threads
 	#ifdef DEBUG
@@ -109,21 +136,22 @@ int initialize_buttons()
 	#endif
 	struct sched_param params;
 	params.sched_priority = sched_get_priority_max(SCHED_FIFO)-5;
-	pthread_setschedparam(pause_pressed_thread, SCHED_FIFO, &params);
-	pthread_setschedparam(pause_released_thread, SCHED_FIFO, &params);
-	pthread_setschedparam(mode_pressed_thread, SCHED_FIFO, &params);
-	pthread_setschedparam(mode_released_thread, SCHED_FIFO, &params);
+	pthread_setschedparam(pause_press_thread, SCHED_FIFO, &params);
+	pthread_setschedparam(pause_release_thread, SCHED_FIFO, &params);
+	pthread_setschedparam(mode_press_thread, SCHED_FIFO, &params);
+	pthread_setschedparam(mode_release_thread, SCHED_FIFO, &params);
 
 	return 0;
 }
 
 /*******************************************************************************
-*	void* pause_pressed_handler(__unused void* ptr)
+* void* pause_press_handler(__unused void* ptr)
 *
-*	wait on falling edge of pause button
+* wait on falling edge of pause button
 *******************************************************************************/
-void* pause_pressed_handler(__unused void* ptr)
+void* button_handler(void* ptr)
 {
+	thread_mode_t mode = (thread_mode_t)ptr;
 	struct pollfd fdset[1];
 	char buf[POLL_BUF_LEN];
 	int gpio_fd = rc_gpio_fd_open(PAUSE_BTN);
@@ -138,11 +166,11 @@ void* pause_pressed_handler(__unused void* ptr)
 			read(fdset[0].fd, buf, POLL_BUF_LEN);
 			// delay debouce
 			rc_usleep(500);
-			if(rc_get_pause_button()==PRESSED){
+			if(rc_get_button_state(PAUSE)==PRESSED){
 				rc_usleep(500);
-				if(rc_get_pause_button()==PRESSED){
+				if(rc_get_button_state(PAUSE)==PRESSED){
 					rc_usleep(500);
-					if(rc_get_pause_button()==PRESSED){
+					if(rc_get_button_state(PAUSE)==PRESSED){
 						pause_pressed_func();
 					}
 				}
@@ -156,156 +184,27 @@ void* pause_pressed_handler(__unused void* ptr)
 	return 0;
 }
 
-/*******************************************************************************
-* @ void* pause_released_handler(__unused void* ptr)
-*
-* wait on rising edge of pause button
-*******************************************************************************/
-void* pause_released_handler(__unused void* ptr)
-{
-	struct pollfd fdset[1];
-	char buf[POLL_BUF_LEN];
-	int gpio_fd = rc_gpio_fd_open(PAUSE_BTN);
-	fdset[0].fd = gpio_fd;
-	fdset[0].events = POLLPRI; // high-priority interrupt
-	// keep running until the program closes
-	while(rc_get_state() != EXITING) {
-		// system hangs here until FIFO interrupt
-		poll(fdset, 1, POLL_TIMEOUT);
-		if (fdset[0].revents & POLLPRI) {
-			lseek(fdset[0].fd, 0, SEEK_SET);
-			read(fdset[0].fd, buf, POLL_BUF_LEN);
-			// delay debouce
-			rc_usleep(500);
-			if(rc_get_pause_button()==RELEASED){
-				rc_usleep(500);
-				if(rc_get_pause_button()==RELEASED){
-					rc_usleep(500);
-					if(rc_get_pause_button()==RELEASED){
-						pause_released_func();
-					}
-				}
-			}
-			// purge any interrupts that may have stacked up
-			lseek(fdset[0].fd, 0, SEEK_SET);
-			read(fdset[0].fd, buf, POLL_BUF_LEN);
-		}
-	}
-	rc_gpio_fd_close(gpio_fd);
-	return 0;
-}
 
 /*******************************************************************************
-*	void* mode_pressed_handler(__unused void* ptr)
-*	wait on falling edge of mode button
+* rc_button_state_t rc_get_button_state(rc_button_t button)
 *******************************************************************************/
-void* mode_pressed_handler(__unused void* ptr)
+rc_button_state_t rc_get_button_state(rc_button_t button);
 {
-	struct pollfd fdset[1];
-	char buf[POLL_BUF_LEN];
-	int gpio_fd = rc_gpio_fd_open(MODE_BTN);
-	fdset[0].fd = gpio_fd;
-	fdset[0].events = POLLPRI; // high-priority interrupt
-	// keep running until the program closes
-	while(rc_get_state() != EXITING) {
-		// system hangs here until FIFO interrupt
-		poll(fdset, 1, POLL_TIMEOUT);
-		if (fdset[0].revents & POLLPRI) {
-			lseek(fdset[0].fd, 0, SEEK_SET);
-			read(fdset[0].fd, buf, POLL_BUF_LEN);
-			// delay debouce
-			rc_usleep(500);
-			if(rc_get_mode_button()==PRESSED){
-				rc_usleep(500);
-				if(rc_get_mode_button()==PRESSED){
-					rc_usleep(500);
-					if(rc_get_mode_button()==PRESSED){
-						mode_pressed_func();
-					}
-				}
-			}
-			// purge any interrupts that may have stacked up
-			lseek(fdset[0].fd, 0, SEEK_SET);
-			read(fdset[0].fd, buf, POLL_BUF_LEN);
-		}
+	if(!buttons_en){
+		fprintf(stderr,"ERROR: call to rc_get_button_state() when buttons have not been initialized.\n");
+		return -2;
 	}
-	rc_gpio_fd_close(gpio_fd);
-	return 0;
-}
-
-/*******************************************************************************
-*	void* mode_released_handler(__unused void* ptr)
-*	wait on rising edge of mode button
-*******************************************************************************/
-void* mode_released_handler(__unused void* ptr)
-{
-	struct pollfd fdset[1];
-	char buf[POLL_BUF_LEN];
-	int gpio_fd = rc_gpio_fd_open(MODE_BTN);
-	fdset[0].fd = gpio_fd;
-	fdset[0].events = POLLPRI; // high-priority interrupt
-	// keep running until the program closes
-	while(rc_get_state() != EXITING) {
-		// system hangs here until FIFO interrupt
-		poll(fdset, 1, POLL_TIMEOUT);
-		if (fdset[0].revents & POLLPRI) {
-			lseek(fdset[0].fd, 0, SEEK_SET);
-			read(fdset[0].fd, buf, POLL_BUF_LEN);
-			// delay debouce
-			rc_usleep(500);
-			if(rc_get_mode_button()==RELEASED){
-				rc_usleep(500);
-				if(rc_get_mode_button()==RELEASED){
-					rc_usleep(500);
-					if(rc_get_mode_button()==RELEASED){
-						mode_released_func();
-					}
-				}
-			}
-			// purge any interrupts that may have stacked up
-			lseek(fdset[0].fd, 0, SEEK_SET);
-			read(fdset[0].fd, buf, POLL_BUF_LEN);
-		}
+	switch(button){
+	case PAUSE:
+		if(rc_gpio_get_value_mmap(PAUSE_BTN)==HIGH) return RELEASED;
+		else return PRESSED;
+	case MODE:
+		if(rc_gpio_get_value_mmap(MODE_BTN)==HIGH) return RELEASED;
+		else return PRESSED;
+	default:
+		fprintf(stderr,"ERROR: in rc_get_button_state, invalid button enum\n");
+		return RELEASED;
 	}
-	rc_gpio_fd_close(gpio_fd);
-	return 0;
-}
-
-/*******************************************************************************
-*	button function assignments
-*******************************************************************************/
-int rc_set_pause_pressed_func(void (*func)(void))
-{
-	if(func==NULL){
-		printf("ERROR: trying to assign NULL pointer to paused_pressed_func\n");
-		return -1;
-	}
-	pause_pressed_func = func;
-	return 0;
-}
-int rc_set_pause_released_func(void (*func)(void)){
-	if(func==NULL){
-		printf("ERROR: trying to assign NULL pointer to paused_released_func\n");
-		return -1;
-	}
-	pause_released_func = func;
-	return 0;
-}
-int rc_set_mode_pressed_func(void (*func)(void)){
-	if(func==NULL){
-		printf("ERROR: trying to assign NULL pointer to mode_pressed_func\n");
-		return -1;
-	}
-	mode_pressed_func = func;
-	return 0;
-}
-int rc_set_mode_released_func(void (*func)(void)){
-	if(func==NULL){
-		printf("ERROR: trying to assign NULL pointer to mode_released_func\n");
-		return -1;
-	}
-	mode_released_func = func;
-	return 0;
 }
 
 /*******************************************************************************
@@ -328,55 +227,7 @@ int rc_wait_for_pause_press()
 	return 0;
 }
 
-/*******************************************************************************
-* waiting functions
-*******************************************************************************/
-int rc_wait_for_mode_press()
-{
-	if(shutdown_button_threads!=0){
-		fprintf(stderr,"ERROR: call to rc_wait_for_mode_press() after buttons have been powered off.\n");
-		return -1;
-	}
-	if(!buttons_en){
-		fprintf(stderr,"ERROR: call to rc_wait_for_mode_press() when buttons have not been initialized.\n");
-		return -2;
-	}
-	// lock mutex briefly then wait for condition signal which unlocks mutex
-	pthread_mutex_lock(&mode_press_mutex);
-	pthread_cond_wait(&mode_press_condition, &mode_press_mutex);
-	pthread_mutex_unlock(&mode_press_mutex);
-	return 0;
-}
 
-/*******************************************************************************
-* rc_button_state_t rc_get_pause_button()
-*******************************************************************************/
-rc_button_state_t rc_get_pause_button()
-{
-	if(!buttons_en){
-		fprintf(stderr,"ERROR: call to rc_get_pause_button() when buttons have not been initialized.\n");
-		return -2;
-	}
-	if(rc_gpio_get_value_mmap(PAUSE_BTN)==HIGH){
-		return RELEASED;
-	}
-	return PRESSED;
-}
-
-/*******************************************************************************
-* rc_button_state_t rc_get_mode_button()
-*******************************************************************************/
-rc_button_state_t rc_get_mode_button()
-{
-	if(!buttons_en){
-		fprintf(stderr,"ERROR: call to rc_get_mode_button() when buttons have not been initialized.\n");
-		return -2;
-	}
-	if(rc_gpio_get_value_mmap(MODE_BTN)==HIGH){
-		return RELEASED;
-	}
-	return PRESSED;
-}
 
 
 /*******************************************************************************
@@ -393,7 +244,7 @@ void rc_stop_buttons(){
 /*******************************************************************************
 * int wait_for_button_handlers_to_join()
 *******************************************************************************/
-int wait_for_button_handlers_to_join()
+int wait_for_button_cleanup()
 {
 	int ret = 0;
 	//allow up to 3 seconds for thread cleanup
@@ -429,4 +280,80 @@ int wait_for_button_handlers_to_join()
 		ret = -1;
 	}
 	return ret;
+}
+
+
+
+
+
+
+
+
+/*******************************************************************************
+* DEPRECATED button function assignments
+*******************************************************************************/
+int rc_set_pause_pressed_func(void (*func)(void))
+{
+	if(func==NULL){
+		printf("ERROR: trying to assign NULL pointer to paused_press_func\n");
+		return -1;
+	}
+	pause_press_func = func;
+	return 0;
+}
+int rc_set_pause_released_func(void (*func)(void)){
+	if(func==NULL){
+		printf("ERROR: trying to assign NULL pointer to paused_release_func\n");
+		return -1;
+	}
+	pause_release_func = func;
+	return 0;
+}
+int rc_set_mode_pressed_func(void (*func)(void)){
+	if(func==NULL){
+		printf("ERROR: trying to assign NULL pointer to mode_press_func\n");
+		return -1;
+	}
+	mode_press_func = func;
+	return 0;
+}
+int rc_set_mode_released_func(void (*func)(void)){
+	if(func==NULL){
+		printf("ERROR: trying to assign NULL pointer to mode_release_func\n");
+		return -1;
+	}
+	mode_release_func = func;
+	return 0;
+}
+
+/*******************************************************************************
+* DEPRECATED
+* rc_button_state_t rc_get_pause_button()
+*******************************************************************************/
+rc_button_state_t rc_get_pause_button()
+{
+	if(!buttons_en){
+		fprintf(stderr,"ERROR: call to rc_get_pause_button() when buttons have not been initialized.\n");
+		return -2;
+	}
+	if(rc_gpio_get_value_mmap(PAUSE_BTN)==HIGH){
+		return RELEASED;
+	}
+	return PRESSED;
+}
+
+/*******************************************************************************
+* DEPRECATED
+* rc_button_state_t rc_get_mode_button()
+*******************************************************************************/
+rc_button_state_t rc_get_mode_button()
+{
+	if(!buttons_en){
+		fprintf(stderr,"ERROR: call to rc_get_mode_button() when buttons have not been initialized.\n");
+		return -2;
+	}
+	if(rc_gpio_get_value_mmap(MODE_BTN)==HIGH){
+		return RELEASED;
+	}
+	return PRESSED;
 }
