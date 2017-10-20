@@ -9,8 +9,8 @@
 * process for optimization with the NEON FPU.
 *******************************************************************************/
 
-#include "rc/other/preprocessor_macros.h"
-#include "rc/math/algebra_common.h"
+#include "rc/preprocessor_macros.h"
+#include "algebra_common.h"
 
 float rc_mult_accumulate(float * __restrict__ a, float * __restrict__ b, int n)
 {

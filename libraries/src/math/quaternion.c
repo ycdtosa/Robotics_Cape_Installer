@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "rc/other/preprocessor_macros.h"
+#include "rc/preprocessor_macros.h"
 #include "rc/math/quaternion.h"
 #include "rc/math/linear_algebra.h"
 

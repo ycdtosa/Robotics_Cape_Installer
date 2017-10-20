@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <math.h>	// for sqrt, pow, etc
 
-#include "rc/other/preprocessor_macros.h"
+#include "rc/preprocessor_macros.h"
 #include "rc/math/polynomial.h"
 
 /*******************************************************************************

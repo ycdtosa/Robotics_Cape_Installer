@@ -6,22 +6,7 @@
 * Credit to Kris Winer most of the framework and register definitions.
 *******************************************************************************/
 #define _GNU_SOURCE
-#include "rc/general/state.h"
-#include "rc/bbb/rc_defs.h"
-#include "rc/sensor/mpu9250.h"
-#include "rc/other/preprocessor_macros.h"
-#include "rc/sensor/mpu9250_defs.h"
-#include "rc/sensor/dmp_firmware.h"
-#include "rc/sensor/dmpKey.h"
-#include "rc/math/vector.h"
-#include "rc/math/matrix.h"
-#include "rc/math/quaternion.h"
-#include "rc/math/filter.h"
-#include "rc/math/linear_algebra.h"
-#include "rc/other/time.h"
-#include "rc/other/other.h"
-#include "rc/io/gpio.h"
-#include "rc/io/i2c.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -32,6 +17,23 @@
 #include <sys/stat.h>
 #include <stdint.h>
 #include <errno.h>
+
+#include "rc/rc_defs.h"
+#include "rc/other.h"
+#include "rc/mpu9250.h"
+#include "rc/preprocessor_macros.h"
+#include "rc/math/vector.h"
+#include "rc/math/matrix.h"
+#include "rc/math/quaternion.h"
+#include "rc/math/filter.h"
+#include "rc/math/linear_algebra.h"
+#include "rc/time.h"
+#include "rc/io/gpio.h"
+#include "rc/io/i2c.h"
+
+#include "mpu9250_defs.h"
+#include "dmp_firmware.h"
+#include "dmpKey.h"
 
 // macros
 #define ARRAY_SIZE(array) sizeof(array)/sizeof(array[0])
@@ -77,12 +79,12 @@ static float mag_scales[3];
 static int last_read_successful;
 static uint64_t last_interrupt_timestamp_nanos;
 static rc_imu_data_t* data_ptr;
-static int shutdown_interrupt_thread = 0;
+static int imu_shutdown_flag = 0;
 // for magnetometer Yaw filtering
 static rc_filter_t low_pass, high_pass;
 
 /*******************************************************************************
-*	config functions for internal use only
+* config functions for internal use only
 *******************************************************************************/
 static int reset_mpu9250();
 static int set_gyro_fsr(rc_gyro_fsr_t fsr, rc_imu_data_t* data);
@@ -90,7 +92,7 @@ static int set_accel_fsr(rc_accel_fsr_t, rc_imu_data_t* data);
 static int set_gyro_dlpf(rc_gyro_dlpf_t);
 static int set_accel_dlpf(rc_accel_dlpf_t);
 static int initialize_magnetometer();
-static int power_down_magnetometer();
+static int power_off_magnetometer();
 static int mpu_set_bypass(unsigned char bypass_on);
 static int mpu_write_mem(unsigned short mem_addr, unsigned short length, unsigned char *data);
 static int mpu_read_mem(unsigned short mem_addr, unsigned short length, unsigned char *data);
@@ -245,7 +247,7 @@ int rc_initialize_imu(rc_imu_data_t *data, rc_imu_config_t conf)
 			return -1;
 		}
 	}
-	else power_down_magnetometer();
+	else power_off_magnetometer();
 
 	// all done!!
 	rc_i2c_release_bus(IMU_BUS);
@@ -412,7 +414,7 @@ int rc_read_imu_temp(rc_imu_data_t* data)
 int reset_mpu9250()
 {
 	// disable the interrupt to prevent it from doing things while we reset
-	shutdown_interrupt_thread = 1;
+	imu_shutdown_flag = 1;
 	// set the device address
 	rc_i2c_set_device_address(IMU_BUS, IMU_ADDR);
 	// write the reset bit
@@ -629,11 +631,11 @@ int initialize_magnetometer()
 }
 
 /*******************************************************************************
-* int power_down_magnetometer()
+* int power_off_magnetometer()
 *
 * Make sure the magnetometer is off.
 *******************************************************************************/
-int power_down_magnetometer()
+int power_off_magnetometer()
 {
 	rc_i2c_set_device_address(IMU_BUS, IMU_ADDR);
 	// Enable i2c bypass to allow talking to magnetometer
@@ -659,11 +661,11 @@ int power_down_magnetometer()
 }
 
 /*******************************************************************************
-*	Power down the IMU
+* Power down the IMU
 *******************************************************************************/
 int rc_power_off_imu()
 {
-	shutdown_interrupt_thread = 1;
+	imu_shutdown_flag = 1;
 	// set the device address
 	rc_i2c_set_device_address(IMU_BUS, IMU_ADDR);
 	// write the reset bit
@@ -794,7 +796,7 @@ int rc_initialize_imu_dmp(rc_imu_data_t *data, rc_imu_config_t conf)
 			return -1;
 		}
 	}
-	else power_down_magnetometer();
+	else power_off_magnetometer();
 	// set full scale ranges. It seems the DMP only scales the gyro properly
 	// at 2000DPS. I'll assume the same is true for accel and use 2G like their
 	// example
@@ -858,7 +860,7 @@ int rc_initialize_imu_dmp(rc_imu_data_t *data, rc_imu_config_t conf)
 	#endif
 	// start the interrupt handler thread
 	interrupt_func_set = 1;
-	shutdown_interrupt_thread = 0;
+	imu_shutdown_flag = 0;
 	rc_set_imu_interrupt_func(&rc_null_func);
 	pthread_create(&imu_interrupt_thread, NULL, \
 					imu_interrupt_handler, (void*) NULL);
@@ -1449,10 +1451,10 @@ void* imu_interrupt_handler( __unused void* ptr)
 	fdset[0].events = POLLPRI;
 	// keep running until the program closes
 	mpu_reset_fifo();
-	while(rc_get_state()!=EXITING && shutdown_interrupt_thread!=1) {
+	while(imu_shutdown_flag!=1) {
 		// system hangs here until IMU FIFO interrupt
 		poll(fdset, 1, IMU_POLL_TIMEOUT);
-		if(rc_get_state()==EXITING || shutdown_interrupt_thread==1){
+		if(imu_shutdown_flag==1){
 			break;
 		}
 		else if (fdset[0].revents & POLLPRI) {
@@ -1465,31 +1467,25 @@ void* imu_interrupt_handler( __unused void* ptr)
 				fprintf(stderr,"WARNING: Something has claimed the I2C bus when an\n");
 				fprintf(stderr,"IMU interrupt was received. Reading IMU anyway.\n");
 			}
-
 			// aquires bus
 			rc_i2c_claim_bus(IMU_BUS);
-
 			// aquires mutex
 			pthread_mutex_lock( &rc_imu_read_mutex );
-
 			// read data
 			ret = read_dmp_fifo(data_ptr);
-
 			// record if it was successful or not
 			if (ret==0) {
-			  last_read_successful=1;
-			  // signals that a measurement is available
-			  pthread_cond_broadcast( &rc_imu_read_condition );
+				last_read_successful=1;
+				// signals that a measurement is available
+				pthread_cond_broadcast( &rc_imu_read_condition );
 			}
-			else
-			  last_read_successful=0;
-
+			else{
+				last_read_successful=0;
+			}
 			// releases mutex
 			pthread_mutex_unlock( &rc_imu_read_mutex );
-
 			// releases bus
 			rc_i2c_release_bus(IMU_BUS);
-
 			// call the user function if not the first run
 			if(first_run == 1){
 				first_run = 0;
@@ -2175,7 +2171,7 @@ int rc_calibrate_gyro_routine()
 
 COLLECT_DATA:
 
-	if(rc_get_state()==EXITING){
+	if(imu_shutdown_flag){
 		rc_i2c_release_bus(IMU_BUS);
 		return -1;
 	}
@@ -2573,7 +2569,7 @@ int rc_calibrate_mag_routine()
 	i = 0;
 
 	// sample data
-	while(i<samples && rc_get_state()!=EXITING){
+	while(i<samples && imu_shutdown_flag==0){
 		if(rc_read_mag_data(&imu_data)<0){
 			fprintf(stderr,"ERROR: failed to read magnetometer\n");
 			break;

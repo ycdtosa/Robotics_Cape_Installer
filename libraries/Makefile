@@ -82,7 +82,7 @@ install:
 	@cp -r include/* $(DESTDIR)$(prefix)/include
 	@# library .so
 	$(INSTALLDIR) $(DESTDIR)$(prefix)/lib
-	$(INSTALL) $(LIBDIR)/$(TARGET) $(DESTDIR)$(prefix)/lib
+	$(INSTALL) $(TARGET) $(DESTDIR)$(prefix)/lib
 	@echo "Install Complete"
 
 
@@ -92,7 +92,7 @@ clean:
 	@echo "Clean Complete"
 
 uninstall:
-	$(RM) $(DESTDIR)$(prefix)/lib/$(TARGET)
+	$(RM) $(DESTDIR)$(prefix)/$(TARGET)
 	$(RM) $(DESTDIR)$(prefix)/include/roboticscape.h
 	$(RM) $(DESTDIR)$(prefix)/include/rc_usefulincludes.h
 	$(RM) $(DESTDIR)$(prefix)/include/rc

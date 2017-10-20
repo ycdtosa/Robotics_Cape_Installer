@@ -66,7 +66,7 @@
 *
 * See the rc_blink and rc_test_buttons example programs for sample use cases.
 ******************************************************************************/
-#include "rc/other/preprocessor_macros.h"
+#include "rc/preprocessor_macros.h"
 
 // state enumerated type
 typedef enum rc_button_state_t {
@@ -81,9 +81,8 @@ typedef enum rc_button_t {
 } rc_button_t;
 
 // initialize and cleanup
-int rc_initialize_buttons();
-void rc_stop_buttons();
-int rc_wait_for_button_cleanup();
+int rc_init_buttons();
+int rc_cleanup_buttons();
 
 // general functions
 int rc_set_button_callback(rc_button_t button, rc_button_state_t state,void (*func)(void));
@@ -93,7 +92,7 @@ int rc_wait_for_button(rc_button_t button, rc_button_state_t state);
 
 
 // deprecated callback function initializers
-int rc_set_pause_pressed_func(void (*func)(void));
+__deprecated int rc_set_pause_pressed_func(void (*func)(void));
 int rc_set_pause_released_func(void (*func)(void));
 int rc_set_mode_pressed_func(void (*func)(void));
 int rc_set_mode_released_func(void (*func)(void));

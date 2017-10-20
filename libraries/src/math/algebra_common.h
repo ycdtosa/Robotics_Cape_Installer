@@ -7,7 +7,7 @@
 #ifndef RC_ALGEBRA_COMMON_H
 #define RC_ALGEBRA_COMMON_H
 
-#include <rc/other/preprocessor_macros.h>
+#include "rc/preprocessor_macros.h"
 
 #define ZERO_TOLERANCE 1e-8 // consider v to be zero if fabs(v)<ZERO_TOLERANCE
 

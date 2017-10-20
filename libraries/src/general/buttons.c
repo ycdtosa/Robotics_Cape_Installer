@@ -11,11 +11,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "rc/general/buttons.h"
+#include "rc/buttons.h"
 #include "rc/io/gpio.h"
-#include "rc/other/preprocessor_macros.h"
-#include "rc/other/time.h"
-#include "rc/bbb/rc_defs.h"
+#include "rc/preprocessor_macros.h"
+#include "rc/time.h"
+#include "rc/rc_defs.h"
 
 #define POLL_BUF_LEN	1024
 #define POLL_TIMEOUT	100 // 0.1 seconds

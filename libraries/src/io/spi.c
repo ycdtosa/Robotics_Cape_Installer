@@ -13,11 +13,11 @@
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
 
+#include "rc/rc_defs.h"
+#include "rc/board_id.h"
 #include "rc/io/spi.h"
 #include "rc/io/gpio.h"
-#include "rc/bbb/rc_defs.h"
-#include "rc/bbb/board_id.h"
-#include "rc/bbb/pinmux.h"
+#include "rc/io/pinmux.h"
 
 #define SPI10_PATH			"/dev/spidev1.0"
 #define SPI11_PATH			"/dev/spidev1.1"

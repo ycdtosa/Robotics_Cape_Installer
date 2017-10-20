@@ -67,10 +67,6 @@
 #define RC_OTHER_H
 
 void rc_null_func();
-float rc_get_random_float();
-double rc_get_random_double();
-int rc_saturate_float(float* val, float min, float max);
-int rc_saturate_double(double* val, double min, double max);
 char* rc_byte_to_binary(unsigned char x);
 int rc_suppress_stdout(int (*func)(void));
 int rc_suppress_stderr(int (*func)(void));

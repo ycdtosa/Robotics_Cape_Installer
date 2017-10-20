@@ -8,7 +8,7 @@
 * See the check_model example for a demonstration.
 *******************************************************************************/
 
-#include "rc/bbb/board_id.h"
+#include "rc/board_id.h"
 #include "stdio.h"
 #include "string.h"
 

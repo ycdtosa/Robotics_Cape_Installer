@@ -8,9 +8,9 @@
 #include <stdlib.h>	// for malloc,calloc,free
 #include <string.h>	// for memcpy
 
-#include "rc/other/other.h"
+#include "rc/math/other.h"
 #include "rc/math/matrix.h"
-#include "rc/math/algebra_common.h"
+#include "algebra_common.h"
 
 /*******************************************************************************
 * int rc_alloc_matrix(rc_matrix_t* A, int rows, int cols)

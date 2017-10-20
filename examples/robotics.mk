@@ -1,13 +1,18 @@
 # shared makefile for all the examples
 
-CC		:= gcc
-LINKER		:= gcc -o
-CFLAGS		:= -c -Wall -O2
-LFLAGS		:= -L ../../libraries -lm -lrt -lpthread -lroboticscape
+INCLUDEDIR	:= ../../libraries/include
+LIBDIR		:= ../../libraries/lib
 
 SOURCES		:= $(wildcard *.c)
 INCLUDES	:= $(wildcard *.h)
 OBJECTS		:= $(SOURCES:$%.c=$%.o)
+
+CC		:= gcc
+LINKER		:= gcc
+
+CFLAGS		:= -Wall -Wextra -I $(INCLUDEDIR)
+OPT_FLAGS	:= -O1
+LFLAGS		:= -L $LIBDIR -lm -lrt -lpthread
 
 prefix		:= /usr
 RM		:= rm -f
@@ -18,17 +23,25 @@ LINK		:= ln -s -f
 LINKDIR		:= /etc/roboticscape
 LINKNAME	:= link_to_startup_program
 
-# linking Objects
+
+
+# linking
 $(TARGET): $(OBJECTS)
-	@$(LINKER) $(@) $(OBJECTS) $(LFLAGS)
+	@$(LINKER) $(LFLAGS) -o $(TARGET) $(OBJECTS)
 
-
-# compiling command
+# rule for objects
 $(OBJECTS): %.o : %.c $(INCLUDES)
-	@$(CC) $(CFLAGS) $< -o $(@)
+	@$(CC) -c $(CFLAGS) $(OPT_FLAGS) $(DEBUGFLAG) $< -o $(@)
 
+
+
+# rule for target
 all:
 	$(TARGET)
+
+# compile with debug symbols and DEBUG defined
+debug:
+	$(MAKE) $(MAKEFILE) DEBUGFLAG="-g -D DEBUG"
 
 install:
 	@$(MAKE) --no-print-directory
@@ -41,3 +54,8 @@ clean:
 
 uninstall:
 	@$(RM) $(DESTDIR)$(prefix)/bin/$(TARGET)
+
+runonboot:
+	@$(MAKE) install --no-print-directory
+	@$(LINK) $(DESTDIR)$(prefix)/bin/$(TARGET) $(LINKDIR)/$(LINKNAME)
+	@echo "$(TARGET) Set to Run on Boot"

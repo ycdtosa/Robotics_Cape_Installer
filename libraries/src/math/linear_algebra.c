@@ -10,9 +10,9 @@
 #include <math.h>	// for sqrt, pow, etc
 #include <string.h>	// for memcpy
 
-#include "rc/math/algebra_common.h"
 #include "rc/math/vector.h"
 #include "rc/math/matrix.h"
+#include "algebra_common.h"
 
 /*******************************************************************************
 * int rc_matrix_times_col_vec(rc_matrix_t A, rc_vector_t v, rc_vector_t* c)

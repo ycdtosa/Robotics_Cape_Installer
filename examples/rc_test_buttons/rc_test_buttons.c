@@ -5,33 +5,35 @@
 * It simply prints to the screen when a button has been pressed or released.
 *******************************************************************************/
 
-#include "../../libraries/rc_usefulincludes.h"
-#include "../../libraries/roboticscape.h"
+#include <stdio.h>
+#include "rc/buttons.h"
+#include "rc/time.h"
+//#include "rc/general/led.h"
 
 // pause button pressed interrupt function
 void on_pause_pressed(){
-	rc_set_led(RED, ON);
+	//rc_set_led(RED, ON);
 	printf("Pause Pressed\n");
 	return;
 }
 
 // pause button released interrupt function
 void on_pause_released(){
-	rc_set_led(RED, OFF);
+	//rc_set_led(RED, OFF);
 	printf("Pause Released\n");
 	return;
 }
 
 // mode button pressed interrupt function
 void on_mode_pressed(){
-	rc_set_led(GREEN, ON);
+	//rc_set_led(GREEN, ON);
 	printf("Mode Pressed\n");
 	return;
 }
 
 // mode button released interrupt function
 void on_mode_released(){
-	rc_set_led(GREEN,OFF);
+	//rc_set_led(GREEN,OFF);
 	printf("Mode Released\n");
 	return;
 }
@@ -39,8 +41,8 @@ void on_mode_released(){
 // main just assigns interrupt functions and waits to exit
 int main(){
 	// initialize hardware first
-	if(rc_initialize()){
-		fprintf(stderr,"ERROR: failed to run rc_initialize(), are you root?\n");
+	if(rc_initialize_buttons()){
+		fprintf(stderr,"ERROR: failed to run rc_init_buttons(), are you root?\n");
 		return -1;
 	}
 	//Assign your own functions to be called when events occur
@@ -53,6 +55,6 @@ int main(){
 	while(rc_get_state()!=EXITING){
 		rc_usleep(10000);
 	}
-	rc_cleanup();
+	rc_cleanup_buttons();
 	return 0;
 }

@@ -5,7 +5,6 @@
 * the BeagleBone easier. This could be used on other linux platforms too.
 *******************************************************************************/
 
-#include "../roboticscape.h"
 #include <stdio.h>
 #include <termios.h>
 #include <errno.h>
@@ -16,6 +15,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <math.h>
+#include "rc/io/uart.h"
 
 #define MIN_BUS 0
 #define MAX_BUS 5
@@ -27,7 +27,7 @@
 * Local Global Variables
 *******************************************************************************/
 static int initialized[MAX_BUS-MIN_BUS+1]; // keep track of if a bus is initialized
-static char *paths[6] = { \
+static char *paths[] = { \
 	"/dev/ttyO0", \
 	"/dev/ttyO1", \
 	"/dev/ttyO2", \
@@ -35,8 +35,9 @@ static char *paths[6] = { \
 	"/dev/ttyO4", \
 	"/dev/ttyO5" };
 
-static int fd[6]; // file descriptors for all ports
-static float bus_timeout_s[6]; // user-requested timeout in seconds for each bus
+static int fd[MAX_BUS+1]; // file descriptors for all ports
+static float bus_timeout_s[MAX_BUS+1]; // user-requested timeout in seconds for each bus
+static int shutdown_flag[MAX_BUS+1];
 
 /*******************************************************************************
 * int rc_uart_init(int bus, int baudrate, float timeout_s)
@@ -188,6 +189,7 @@ int rc_uart_init(int bus, int baudrate, float timeout_s)
 	bus_timeout_s[bus]=timeout_s;
 
 	rc_uart_flush(bus);
+	shutdown_flag[bus]=0;
 	return 0;
 }
 
@@ -206,6 +208,7 @@ int rc_uart_close(int bus)
 		printf("ERROR: uart bus must be between %d & %d\n", MIN_BUS, MAX_BUS);
 		return -1;
 	}
+	shutdown_flag[bus]=1;
 	// if not initialized already, return
 	if(initialized[bus]==0) return 0;
 	// flush and close
@@ -306,8 +309,7 @@ int rc_uart_send_byte(int bus, char data)
 * int rc_uart_read_bytes(int bus, int bytes, char* buf)
 *
 * This is a blocking function call. It will only return once the desired number
-* of bytes has been read from the buffer or if the global flow state defined
-* in robotics_cape.h is set to EXITING.
+* of bytes has been read from the buffer or the shutdown flag is set
 * Due to the Sitara's UART FIFO buffer, MAX_READ_LEN (128bytes) is the largest
 * packet that can be read with a single call to read(). For reads larger than
 * 128bytes, we run a loop instead.
@@ -358,9 +360,8 @@ int rc_uart_read_bytes(int bus, int bytes, char* buf)
 	timeout.tv_usec = (int)(1000000*fmod(bus_timeout_s[bus],1));
 
 	// exit the read loop once enough bytes have been read
-	// or the global flow state becomes EXITING. This prevents programs
-	// getting stuck here and not exiting properly
-	while((bytes_left>0)&&rc_get_state()!=EXITING){
+	// or the the shutdown signal flag is set
+	while((bytes_left>0) && shutdown_flag[bus]==0){
 		FD_ZERO(&set); /* clear the set */
 		FD_SET(fd[bus], &set); /* add our file descriptor to the set */
 		ret = select(fd[bus] + 1, &set, NULL, NULL, &timeout);
@@ -410,7 +411,7 @@ int rc_uart_read_bytes(int bus, int bytes, char* buf)
 * - a '\n' new line character was read, this is discarded.
 * - max_bytes were read, this prevents overflowing a user buffer.
 * - timeout declared in rc_uart_init() is reached
-* - Global flow state in robotics_cape.h is set to EXITING.
+* - shutdown flag is set
 *******************************************************************************/
 int rc_uart_read_line(int bus, int max_bytes, char* buf)
 {
@@ -428,9 +429,8 @@ int rc_uart_read_line(int bus, int max_bytes, char* buf)
 	timeout.tv_usec = (int)(1000000*fmod(bus_timeout_s[bus],1));
 
 	// exit the read loop once enough bytes have been read
-	// or the global flow state becomes EXITING. This prevents programs
-	// getting stuck here and not exiting properly
-	while(bytes_read<max_bytes && rc_get_state()!=EXITING){
+	// or the shutdown flag is set
+	while(bytes_read<max_bytes && shutdown_flag[bus]==0){
 		FD_ZERO(&set); /* clear the set */
 		FD_SET(fd[bus], &set); /* add our file descriptor to the set */
 		ret = select(fd[bus] + 1, &set, NULL, NULL, &timeout);
