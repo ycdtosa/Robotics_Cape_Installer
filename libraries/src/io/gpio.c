@@ -196,14 +196,14 @@ int rc_gpio_fd_close(int fd)
 
 
 /*******************************************************************************
-* int initialize_mmap_gpio()
+* int rc_gpio_init_mmap()
 *
 * by default gpio subsystems 0,1,&2 have clock signals on boot
 * this function exports a pin from the last subsystem (113) so the
 * gpio driver enables the clock signal so the rest of the gpio
 * functions here work.
 *******************************************************************************/
-int rc_init_mmap_gpio()
+int rc_gpio_init_mmap()
 {
 	// return immediately if gpio already initialized
 	if(mmap_initialized_flag){
@@ -267,4 +267,81 @@ int rc_init_mmap_gpio()
 
 	mmap_initialized_flag=1;
 	return 0;
+}
+
+/*******************************************************************************
+* int rc_gpio_set_value_mmap(int pin, int state)
+*
+* write HIGH or LOW to a pin
+* pinmux must already be configured for output
+*******************************************************************************/
+int rc_gpio_set_value_mmap(int pin, int state)
+{
+	if(rc_gpio_init_mmap()){
+		return -1;
+	}
+	if(pin<0 || pin>128){
+		fprintf(stderr,"ERROR: in rc_gpio_set_value_mmap(),invalid gpio pin\n");
+		return -1;
+	}
+	int bank = pin/32;
+	int id = pin - bank*32;
+	int bank_offset;
+	switch(bank){
+		case 0:
+			bank_offset=GPIO0;
+			break;
+		case 1:
+			bank_offset=GPIO1;
+			break;
+		case 2:
+			bank_offset=GPIO2;
+			break;
+		case 3:
+			bank_offset=GPIO3;
+			break;
+		default:
+			return -1;
+	}
+	//map[(bank_offset-MMAP_OFFSET+GPIO_OE)/4] &= ~(1<<p.bank_id);
+	if(state) map[(bank_offset-MMAP_OFFSET+GPIO_DATAOUT)/4] |= (1<<id);
+	else map[(bank_offset-MMAP_OFFSET+GPIO_DATAOUT)/4] &= ~(1<<id);
+	return 0;
+}
+
+/*******************************************************************************
+* int rc_gpio_get_value_mmap(int pin)
+*
+* returns 1 or 0 for HIGH or LOW
+* pinMUX must already be configured for input
+*******************************************************************************/
+int rc_gpio_get_value_mmap(int pin)
+{
+	if(rc_gpio_init_mmap()){
+		return -1;
+	}
+	if(pin<0 || pin>128){
+		fprintf(stderr,"ERROR: in rc_gpio_get_value_mmap(),invalid gpio pin\n");
+		return -1;
+	}
+	int bank = pin/32;
+	int id = pin - bank*32;
+	int bank_offset;
+	switch(bank){
+		case 0:
+			bank_offset=GPIO0;
+			break;
+		case 1:
+			bank_offset=GPIO1;
+			break;
+		case 2:
+			bank_offset=GPIO2;
+			break;
+		case 3:
+			bank_offset=GPIO3;
+			break;
+		default:
+			return -1;
+	}
+	return (map[(bank_offset-MMAP_OFFSET+GPIO_DATAIN)/4] & (1<<id))>>id;
 }

@@ -15,19 +15,24 @@
 #include "rc/preprocessor_macros.h"
 #include "adc_registers.h"
 
+#define DC_JACK_OFFSET -0.15
+#define LIPO_OFFSET -0.10
+#define LIPO_ADC_CH 6
+#define DC_JACK_ADC_CH  5
+#define V_DIV_RATIO 11.0
+
 static volatile uint32_t *map; // pointer to /dev/mem
 static int adc_initialized_flag = 0; // boolean to check if mem mapped
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 /*******************************************************************************
-* int rc_init_adc()
+* int rc_adc_init()
 *
 * Initialize the Analog-Digital Converter
 * each channel is set up in software one-shot mode for general purpose reading
 * internal averaging set to 8 samples to reduce noise
 *******************************************************************************/
-int rc_init_adc()
+int rc_adc_init()
 {
 	if(adc_initialized_flag) return 0;
 	int fd = open("/dev/mem", O_RDWR);
@@ -106,16 +111,14 @@ int rc_init_adc()
 	return 0;
 }
 
-
-// Read in from an analog pin with oneshot mode
-int mmap_adc_read_raw(int ch) {
+/*******************************************************************************
+* int mmap_adc_read_raw(int ch)
+*
+* Read in from an analog pin with oneshot mode
+*******************************************************************************/
+int mmap_adc_read_raw(int ch)
+{
 	int output;
-	// lock the mutex to prevent others from interfering while the adc
-	// is sampling which takes time
-	if(pthread_mutex_lock(&mutex)){
-		fprintf(stderr,"ERROR: in adc_read_raw, failed to acquire mutex\n");
-		return -1;
-	}
 	// clear the FIFO buffer just in case it's not empty
 	while(map[(FIFO0COUNT-MMAP_OFFSET)/4] & FIFO_COUNT_MASK){
 		output =  map[(ADC_FIFO0DATA-MMAP_OFFSET)/4] & ADC_FIFO_MASK;
@@ -126,6 +129,60 @@ int mmap_adc_read_raw(int ch) {
 	while(!(map[(FIFO0COUNT-MMAP_OFFSET)/4] & FIFO_COUNT_MASK)){}
 	// return the the FIFO0 data register
 	output =  map[(ADC_FIFO0DATA-MMAP_OFFSET)/4] & ADC_FIFO_MASK;
-	pthread_mutex_unlock(&mutex);
 	return output;
+}
+
+/*******************************************************************************
+* float rc_battery_voltage()
+*
+* returns the LiPo battery voltage on the robotics cape
+* this accounts for the voltage divider ont he cape
+*******************************************************************************/
+float rc_battery_voltage()
+{
+	float v = (rc_adc_volt(LIPO_ADC_CH)*V_DIV_RATIO)+LIPO_OFFSET;
+	if(v<0.3) v = 0.0;
+	return v;
+}
+
+/*******************************************************************************
+* float rc_dc_jack_voltage()
+*
+* returns the DC power jack voltage on the robotics cape
+* this accounts for the voltage divider ont he cape
+*******************************************************************************/
+float rc_dc_jack_voltage()
+{
+	float v = (rc_adc_volt(DC_JACK_ADC_CH)*V_DIV_RATIO)+DC_JACK_OFFSET;
+	if(v<0.3) v = 0.0;
+	return v;
+}
+
+/*******************************************************************************
+* int rc_adc_raw(int ch)
+*
+* returns the raw adc reading
+*******************************************************************************/
+int rc_adc_raw(int ch)
+{
+	if (ch < 0 || ch > 6) {
+		fprintf(stderr, "ERROR: analog pin must be in 0-6\n");
+		return -1;
+	}
+	return mmap_adc_read_raw((uint8_t)ch);
+}
+
+/*******************************************************************************
+* float rc_adc_volt(int ch)
+*
+* returns an actual voltage for an adc channel
+*******************************************************************************/
+float rc_adc_volt(int ch)
+{
+	if (ch < 0 || ch > 6) {
+		fprintf(stderr, "ERROR: analog pin must be in 0-6\n");
+		return -1;
+	}
+	int raw_adc = mmap_adc_read_raw((uint8_t)ch);
+	return raw_adc * 1.8 / 4095.0;
 }

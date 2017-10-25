@@ -5,17 +5,26 @@
 * prints voltages read by all adc channels
 *******************************************************************************/
 
-#include "../../libraries/rc_usefulincludes.h"
-#include "../../libraries/roboticscape.h"
+#include <stdio.h>
+#include "rc/io/adc.h"
+#include "rc/time.h"
+#include "rc/flow.h"
+
 
 int main(){
 	int i;
-
-	// initialize hardware first
-	if(rc_initialize()){
-		fprintf(stderr,"ERROR: failed to run rc_initialize(), are you root?\n");
+	// start signal handler so we can exit cleanly
+	if(rc_enable_signal_handler()<0){
+		fprintf(stderr,"ERROR: failed to complete rc_enable_signal_handler\n");
 		return -1;
 	}
+	// initialize hardware first
+	if(rc_adc_init()){
+		fprintf(stderr,"ERROR: failed to run rc_init_adc(), are you root?\n");
+		return -1;
+	}
+	// finished initializing so set state to RUNNING
+	rc_set_state(RUNNING);
 
 	printf(" adc_0 |");
 	printf(" adc_1 |");
@@ -25,6 +34,7 @@ int main(){
 	printf("Battery|");
 	printf("\n");
 
+	// run untill the signal handler sets state to EXITING
 	while(rc_get_state()!=EXITING){
 		printf("\r");
 		//print all channels
@@ -34,8 +44,9 @@ int main(){
 		printf("%6.2f |", rc_dc_jack_voltage());
 		printf("%6.2f |", rc_battery_voltage());
 		fflush(stdout);
-		rc_usleep(100000);
+		//rc_usleep(100000);
 	}
-	rc_cleanup();
+
+
 	return 0;
 }

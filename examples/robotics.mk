@@ -12,7 +12,7 @@ LINKER		:= gcc
 
 CFLAGS		:= -Wall -Wextra -I $(INCLUDEDIR)
 OPT_FLAGS	:= -O1
-LFLAGS		:= -L $LIBDIR -lm -lrt -lpthread
+LFLAGS		:= -L $(LIBDIR) -lm -lrt -lpthread -lroboticscape
 
 prefix		:= /usr
 RM		:= rm -f

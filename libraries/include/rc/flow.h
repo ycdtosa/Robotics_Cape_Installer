@@ -125,17 +125,23 @@ typedef enum rc_state_t {
 	EXITING
 } rc_state_t;
 
-int rc_initialize();	// call at the beginning of main()
-int rc_cleanup();	// call at the end of main()
 
-int rc_make_pid_file();
-int rc_kill();		// not usually necessary, use rc_kill_robot example instead
 
-int rc_enable_signal_handler();
-void rc_disable_signal_handler();
 rc_state_t rc_get_state();
 int rc_set_state(rc_state_t new_state);
 int rc_print_state();
+
+int rc_make_pid_file();
+int rc_kill();
+int rc_remove_pid_file();
+
+
+int rc_enable_signal_handler();
+int rc_disable_signal_handler();
+
+// deprecated
+int rc_initialize();	// call at the beginning of main()
+int rc_cleanup();	// call at the end of main()
 
 
 

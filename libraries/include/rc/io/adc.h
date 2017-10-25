@@ -34,6 +34,7 @@
 #ifndef RC_ADC_H
 #define RC_ADC_H
 
+int   rc_adc_init();
 float rc_battery_voltage();
 float rc_dc_jack_voltage();
 int   rc_adc_raw(int ch);

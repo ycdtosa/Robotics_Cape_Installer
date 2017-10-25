@@ -27,6 +27,8 @@ int rc_gpio_get_value(unsigned int gpio);
 int rc_gpio_set_edge(unsigned int gpio, rc_pin_edge_t edge);
 int rc_gpio_fd_open(unsigned int gpio);
 int rc_gpio_fd_close(int fd);
+
+int rc_gpio_init_mmap();
 int rc_gpio_set_value_mmap(int pin, int state);
 int rc_gpio_get_value_mmap(int pin);
 

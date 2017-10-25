@@ -30,7 +30,7 @@ FLOAT_FLAG	:= -mfloat-abi=hard
 LFLAGS		:= -lm -lrt -lpthread -shared -Wl,-soname,$(SONAME)
 
 # set prefix if not already set
-prefix		?= /home/debian
+prefix		?= /usr
 RM		:= rm -f -r
 INSTALL		:= install -m 755
 INSTALLDIR	:= install -d -m 755
