@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "rc/buttons.h"
+#include "rc/button.h"
 #include "rc/io/gpio.h"
 #include "rc/preprocessor_macros.h"
 #include "rc/time.h"
@@ -60,12 +60,12 @@ static void rc_null_func(){
 }
 
 /*******************************************************************************
-* int rc_initialize_buttons()
+* int rc_init_buttons()
 *
 * start 4 threads to handle 4 interrupt routines for pressing and
 * releasing the two buttons.
 *******************************************************************************/
-int rc_initialize_buttons()
+int rc_init_buttons()
 {
 	int i;
 	// sanity checks
@@ -131,7 +131,7 @@ int rc_initialize_buttons()
 	for(i=0;i<4;i++){
 		pthread_setschedparam(threads[i], SCHED_FIFO, &params);
 	}
-
+	initialized_flag=1;
 	return 0;
 }
 

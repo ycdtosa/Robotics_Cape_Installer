@@ -63,6 +63,7 @@ int rc_led_set(rc_led_t led, int value);
 int rc_led_get(rc_led_t led);
 
 int rc_led_blink(rc_led_t led, float hz, float duration);
-int rc_led_stop_blink(rc_led_t);
+int rc_led_stop_blink(rc_led_t led);
+int rc_led_stop_blink_all();
 
 #endif // RC_LED_H
