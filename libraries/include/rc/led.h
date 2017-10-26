@@ -46,13 +46,23 @@
 
 typedef enum rc_led_t {
 	GREEN,
-	RED
+	RED,
+	USR0,
+	USR1,
+	USR2,
+	USR3,
+	BAT0,
+	BAT1,
+	BAT2,
+	BAT3,
+	WIFI
 } rc_led_t;
 
-int rc_initialize_leds();
-int rc_cleanup_leds();
-int rc_set_led(rc_led_t led, int state);
-int rc_get_led(rc_led_t led);
-int rc_blink_led(rc_led_t led, float hz, float period);
+
+int rc_led_set(rc_led_t led, int value);
+int rc_led_get(rc_led_t led);
+
+int rc_led_blink(rc_led_t led, float hz, float duration);
+int rc_led_stop_blink(rc_led_t);
 
 #endif // RC_LED_H
