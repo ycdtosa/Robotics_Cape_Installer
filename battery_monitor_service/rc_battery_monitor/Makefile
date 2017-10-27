@@ -2,41 +2,54 @@
 # Just change the target name to match your main source code filename.
 TARGET = rc_battery_monitor
 
-CC	:= gcc
-LINKER   := gcc -o
-CFLAGS	:= -c -Wall -g
-LFLAGS	:= -L ../../libraries -lm -lrt -lpthread -lroboticscape
+INCLUDEDIR	:= ../../libraries/include
+LIBDIR		:= ../../libraries/lib
 
-SOURCES  := $(wildcard *.c)
-INCLUDES := $(wildcard *.h)
-OBJECTS  := $(SOURCES:$%.c=$%.o)
+CC		:= gcc
+LINKER		:= gcc
 
-PREFIX := /usr
-RM := rm -f
-INSTALL := install -m 755 
-INSTALLDIR := install -d -m 755 
+CFLAGS		:= -Wall -Wall -Wextra -I $(INCLUDEDIR)
+OPT_FLAGS	:= -O1
+LFLAGS		:= -L $(LIBDIR) -lm -lrt -lpthread -lroboticscape
+
+SOURCES		:= $(wildcard *.c)
+INCLUDES	:= $(wildcard *.h)
+OBJECTS		:= $(SOURCES:$%.c=$%.o)
 
 
-# linking Objects
+prefix		:= /usr
+RM		:= rm -f
+INSTALL		:= install -o root -g root -m 4755
+INSTALLDIR	:= install -d -m 755
+
+LINK		:= ln -s -f
+LINKDIR		:= /etc/roboticscape
+LINKNAME	:= link_to_startup_program
+
+
+# linking
 $(TARGET): $(OBJECTS)
-	@$(LINKER) $(@) $(OBJECTS) $(LFLAGS)
+	@$(LINKER) $(LFLAGS) -o $(TARGET) $(OBJECTS)
+
+# rule for objects
+$(OBJECTS): %.o : %.c $(INCLUDES)
+	@$(CC) -c $(CFLAGS) $(OPT_FLAGS) $(DEBUGFLAG) $< -o $(@)
 
 
-# compiling command
-$(OBJECTS): %.o : %.c
-	$(CC) $(CFLAGS) -c $< -o $(@)
-
-
-all: 
+all:
 	$(TARGET)
 	@echo "$(TARGET) Make Complete"
 
-install: 
+# compile with debug symbols and DEBUG defined
+debug:
+	$(MAKE) $(MAKEFILE) DEBUGFLAG="-g -D DEBUG"
+
+install:
 	@$(MAKE) --no-print-directory
 	@$(INSTALLDIR) $(DESTDIR)$(PREFIX)/bin
 	@$(INSTALL) $(TARGET) $(DESTDIR)$(PREFIX)/bin
 	@echo "$(TARGET) Install Complete"
-	
+
 clean:
 	@$(RM) $(OBJECTS)
 	@$(RM) $(TARGET)
@@ -47,4 +60,4 @@ uninstall:
 	@echo "$(TARGET) Uninstall Complete"
 
 
-	
+

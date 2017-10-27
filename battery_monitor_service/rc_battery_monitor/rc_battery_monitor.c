@@ -1,6 +1,6 @@
 /******************************************************************************
 * rc_battery_monitor.c
-* James Strawson - 2016
+* James Strawson - 2017
 *
 * see README.txt for details
 *******************************************************************************/
@@ -10,12 +10,13 @@
 #include <error.h>
 #include <unistd.h>
 #include <signal.h>
-#include "../../libraries/roboticscape.h"
-#include "../../libraries/rc_defs.h"
-#include "../../libraries/mmap/rc_mmap_gpio_adc.h"
 #include <sys/file.h>
+#include "rc/adc/h"
+#include "rc/led.h"
+#include "rc/math/filter.h"
 
 #define BATTPIDFILE	"/var/run/rc_battery_monitor.pid"
+#define START_BLINK_US	100000	// 0.1 second
 
 // Critical Max voltages of packs used to detect number of cells in pack
 #define CELL_MAX		4.25 // set higher than actual to detect num cells
@@ -33,15 +34,16 @@
 #define STD_DEV_TOLERANCE	0.04	// above 0.1 definitely charging
 
 // functions
-void illuminate_leds(int i);
-int kill_existing_instance();
-void shutdown_signal_handler(int signo);
+static void illuminate_leds(int i);
+static int kill_existing_instance();
+static void shutdown_signal_handler(int signo);
+static int startup_blink();
 
 // gpio designation for led 2 is a global variable
 // the rest are #defines but since led 2 is different on the blue
 // we must make it variable
-int batt_led_2;
-int running;
+static int batt_led_2;
+static int running;
 
 
 // main() takes only one optional argument: -k (kill)
@@ -75,7 +77,7 @@ int main(int argc, char *argv[]){
 		case 'k':  // kill mode
 			return kill_existing_instance();
 			break;
-			
+
 		default:
 			fprintf(stderr,"\nInvalid Argument \n");
 			return -1;
@@ -112,26 +114,21 @@ int main(int argc, char *argv[]){
 	fclose(fd);
 
 	// set up signal handler
-	signal(SIGINT, shutdown_signal_handler);	
-	signal(SIGTERM, shutdown_signal_handler);	
+	signal(SIGINT, shutdown_signal_handler);
+	signal(SIGTERM, shutdown_signal_handler);
 
 	// set led 2 gpio designation depending on board
 	if(rc_get_bb_model()==BB_BLUE) batt_led_2=BATT_LED_2_BLUE;
 	else batt_led_2=BATT_LED_2;
 
-	// open the gpio channels for 4 battery indicator LEDs
-	rc_gpio_export(BATT_LED_1);
-	rc_gpio_export(batt_led_2);
-	rc_gpio_export(BATT_LED_3);
-	rc_gpio_export(BATT_LED_4);
-	rc_gpio_set_dir(BATT_LED_1, OUTPUT_PIN);
-	rc_gpio_set_dir(batt_led_2, OUTPUT_PIN);
-	rc_gpio_set_dir(BATT_LED_3, OUTPUT_PIN);
-	rc_gpio_set_dir(BATT_LED_4, OUTPUT_PIN);
-	
+	// set all pins off and check that is works
+	if(rc_led_set(BAT0,LOW)) return -1;
+	if(rc_led_set(BAT1,LOW)) return -1;
+	if(rc_led_set(BAT2,LOW)) return -1;
+	if(rc_led_set(BAT3,LOW)) return -1;
+
 	// enable adc
-	initialize_mmap_adc();
-	initialize_mmap_gpio();
+	if(rc_adc_init()) return -1;
 
 	// start filters
 	v_pack = rc_battery_voltage();
@@ -149,29 +146,53 @@ int main(int argc, char *argv[]){
 		return -1;
 	}
 	rc_prefill_filter_outputs(&filterJ, v_jack);
-	rc_prefill_filter_inputs(&filterJ, v_jack);		
-	
+	rc_prefill_filter_inputs(&filterJ, v_jack);
+
 	// first decide if the user has called this from a terminal
 	// or as a startup process
 	if(isatty(fileno(stdout))){
 		printing = 1;
 		printf("\n2S Pack   Jack   #Cells   Cell\n");
 	}
-	
-	// run intil running==0 which is set by signal handler
+
+	// blink for fun!
+	startup_blink();
+	startup_blink();
+	startup_blink();
+
+	// run until running==0 which is set by signal handler
 	running = 1;
 	while(running){
 		charging = 0;
 		// read in the voltage of the 2S pack and DC jack
-		v_pack = rc_march_filter(&filterB, rc_battery_voltage());
-		v_jack = rc_march_filter(&filterJ, rc_dc_jack_voltage());
+		new_v_pack = rc_battery_voltage();
+		new_v_jack = rc_dc_jack_voltage();
 
-		if(v_pack==-1 || v_jack==-1){
+		if(new_v_pack==-1.0f || new_v_jack==-1.0f){
 			fprintf(stderr,"ERROR in rc_battery_monitor, can't read ADC voltages\n");
 			remove(PID_FILE);
 			return -1;
 		}
-		
+
+		// if there is a sudden jump due to connection or disconnection
+		// reset the filters
+		if(abs(new_v_pack-v_pack)>2){
+			rc_prefill_filter_outputs(&filterB, new_v_pack);
+			rc_prefill_filter_inputs(&filterB, new_v_pack);
+			startup_blink();
+			startup_blink();
+		}
+		if(abs(new_v_jack-v_jack)>2){
+			rc_prefill_filter_outputs(&filterJ, new_v_jack);
+			rc_prefill_filter_inputs(&filterJ, new_v_jack);
+			startup_blink();
+			startup_blink();
+		}
+		// marge moving average filter
+		v_pack = rc_march_filter(&filterB, new_v_pack);
+		v_jack = rc_march_filter(&filterJ, new_v_jack);
+
+
 		// find standard deviation of battery signal to determine
 		// if a 2S pack is connected or not
 		if(v_pack>(2*CELL_DIS)) stddev=rc_std_dev_ringbuf(filterB.in_buf);
@@ -182,18 +203,14 @@ int main(int argc, char *argv[]){
 			cell_voltage = v_pack/2;
 			num_cells = 2;
 		}
-		else{
-			pack_connected = 0;
-		}
+		else pack_connected = 0;
 
 		// check charging condition
 		if(pack_connected && v_jack>10.0 && cell_voltage<V_CHG_DETECT){
 			charging = 1;
 		}
-		else{
-			charging = 0;
-		}
-			
+		else charging = 0;
+
 		// no 2S pack on the White 3-pin connector, check for dc jack batteries
 		if(!pack_connected){
 			// check 4S condition
@@ -207,7 +224,7 @@ int main(int argc, char *argv[]){
 				cell_voltage = v_jack/3;
 			}
 			// check for 2S condition
-			else if(v_jack>CELL_DIS*2 && v_jack<CELL_MAX*2){ 
+			else if(v_jack>CELL_DIS*2 && v_jack<CELL_MAX*2){
 				num_cells = 2;
 				cell_voltage = v_jack/2;
 			}
@@ -217,11 +234,11 @@ int main(int argc, char *argv[]){
 				num_cells = 0;
 			}
 		}
-		
+
 		// done sensing, start outputting
 		if(printing){
 			printf("\r %0.2fV   %0.2fV	 %d	 %0.2fV   ", \
-									v_pack, v_jack, num_cells, cell_voltage);
+				v_pack, v_jack, num_cells, cell_voltage);
 			fflush(stdout);
 		}
 
@@ -236,7 +253,7 @@ int main(int argc, char *argv[]){
 		// turn off LEDs if obviously 12v power supply
 		else if(num_cells!=2 && v_jack>11.5 && v_jack<12.5){
 			illuminate_leds(0);
-		}	
+		}
 		// normal battery discharging
 		else if(cell_voltage<CELL_DIS)	illuminate_leds(0);
 		else if(cell_voltage>CELL_FULL) illuminate_leds(4);
@@ -249,7 +266,6 @@ int main(int argc, char *argv[]){
 			else toggle=4;
 			illuminate_leds(toggle);
 		}
-		
 
 		// sleepy time
 		rc_usleep(LOOP_SLEEP_US);
@@ -282,7 +298,7 @@ void shutdown_signal_handler(int signo){
 int kill_existing_instance(){
 	FILE* fd;
 	int old_pid, i;
-	
+
 	// attempt to open PID file
 	fd = fopen(BATTPIDFILE, "r");
 	// if the file didn't open, no proejct is runnning in the background
@@ -290,36 +306,36 @@ int kill_existing_instance(){
 	if (fd == NULL) {
 		return 0;
 	}
-	
+
 	// otherwise try to read the current process ID
 	fscanf(fd,"%d", &old_pid);
 	fclose(fd);
-	
-	// if the file didn't contain a PID number, remove it and 
+
+	// if the file didn't contain a PID number, remove it and
 	// return -1 indicating weird behavior
 	if(old_pid == 0){
 		remove(BATTPIDFILE);
 		return 1;
 	}
-		
+
 	// attempt a clean shutdown
 	kill((pid_t)old_pid, SIGINT);
-	
-	// check every 0.1 seconds to see if it closed 
+
+	// check every 0.1 seconds to see if it closed
 	for(i=0; i<20; i++){
 		if(getpgid(old_pid) >= 0) rc_usleep(100000);
 		else{ // succcess, it shut down properly
 			remove(BATTPIDFILE);
-			return 1; 
+			return 1;
 		}
 	}
-	
+
 	// otherwise force kill the program if the PID file never got cleaned up
 	kill((pid_t)old_pid, SIGKILL);
 
 	// close and delete the old file
 	remove(BATTPIDFILE);
-	
+
 	// return -1 indicating the program had to be killed
 	return -1;
 }
@@ -330,34 +346,34 @@ void illuminate_leds(int i){
 	switch(i){
 	// now illuminate LEDs properly
 	case 4:
-		rc_gpio_set_value_mmap(BATT_LED_1,HIGH);
-		rc_gpio_set_value_mmap(batt_led_2,HIGH);
-		rc_gpio_set_value_mmap(BATT_LED_3,HIGH);
-		rc_gpio_set_value_mmap(BATT_LED_4,HIGH);
+		rc_led_set(BAT0,HIGH);
+		rc_led_set(BAT1,HIGH);
+		rc_led_set(BAT2,HIGH);
+		rc_led_set(BAT3,HIGH);
 		break;
 	case 3:
-		rc_gpio_set_value_mmap(BATT_LED_1,HIGH);
-		rc_gpio_set_value_mmap(batt_led_2,HIGH);
-		rc_gpio_set_value_mmap(BATT_LED_3,HIGH);
-		rc_gpio_set_value_mmap(BATT_LED_4,LOW);
+		rc_led_set(BAT0,HIGH);
+		rc_led_set(BAT1,HIGH);
+		rc_led_set(BAT2,HIGH);
+		rc_led_set(BAT3,LOW);
 		break;
 	case 2:
-		rc_gpio_set_value_mmap(BATT_LED_1,HIGH);
-		rc_gpio_set_value_mmap(batt_led_2,HIGH);
-		rc_gpio_set_value_mmap(BATT_LED_3,LOW);
-		rc_gpio_set_value_mmap(BATT_LED_4,LOW);
+		rc_led_set(BAT0,HIGH);
+		rc_led_set(BAT1,HIGH);
+		rc_led_set(BAT2,LOW);
+		rc_led_set(BAT3,LOW);
 		break;
 	case 1:
-		rc_gpio_set_value_mmap(BATT_LED_1,HIGH);
-		rc_gpio_set_value_mmap(batt_led_2,LOW);
-		rc_gpio_set_value_mmap(BATT_LED_3,LOW);
-		rc_gpio_set_value_mmap(BATT_LED_4,LOW);
+		rc_led_set(BAT0,HIGH);
+		rc_led_set(BAT1,LOW);
+		rc_led_set(BAT2,LOW);
+		rc_led_set(BAT3,LOW);
 		break;
 	case 0:
-		rc_gpio_set_value_mmap(BATT_LED_1,LOW);
-		rc_gpio_set_value_mmap(batt_led_2,LOW);
-		rc_gpio_set_value_mmap(BATT_LED_3,LOW);
-		rc_gpio_set_value_mmap(BATT_LED_4,LOW);
+		rc_led_set(BAT0,LOW);
+		rc_led_set(BAT1,LOW);
+		rc_led_set(BAT2,LOW);
+		rc_led_set(BAT3,LOW);
 		break;
 	default:
 		fprintf(stderr,"ERROR in rc_battery_monitor, can only illuminate between 0 and 4 leds\n");
@@ -365,6 +381,36 @@ void illuminate_leds(int i){
 		break;
 	}
 	return;
+}
+
+
+static int startup_blink(){
+	// start with lighting up the bottom led
+	// also take this chance to catch
+	rc_led_set(BAT0,HIGH);
+	rc_led_set(BAT1,LOW);
+	rc_led_set(BAT2,LOW);
+	rc_led_set(BAT3,LOW);
+	rc_usleep(START_BLINK_US);
+	rc_led_set(BAT0,LOW);
+	rc_led_set(BAT1,HIGH);
+	rc_usleep(START_BLINK_US);
+	rc_led_set(BAT1,LOW);
+	rc_led_set(BAT2,HIGH);
+	rc_usleep(START_BLINK_US);
+	rc_led_set(BAT2,LOW);
+	rc_led_set(BAT3,HIGH);
+	rc_usleep(START_BLINK_US);
+	rc_led_set(BAT3,LOW);
+	rc_led_set(BAT2,HIGH);
+	rc_usleep(START_BLINK_US);
+	rc_led_set(BAT2,LOW);
+	rc_led_set(BAT1,HIGH);
+	rc_usleep(START_BLINK_US);
+	rc_led_set(BAT1,LOW);
+	rc_led_set(BAT0,HIGH);
+	rc_usleep(START_BLINK_US);
+	rc_led_set(BAT0,LOW);
 }
 
 
