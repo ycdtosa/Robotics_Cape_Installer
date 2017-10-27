@@ -134,11 +134,14 @@ int rc_gpio_set_value(int gpio, int value)
 *******************************************************************************/
 int rc_gpio_get_value(int pin)
 {
-	char ch;
+	char ch[2];
 	if(init_pin_fd(pin)) return -1;
-	read(value_fd[pin], &ch, 1);
-	if (ch != '0') return 1;
-	return 0;
+	read(value_fd[pin], ch, 2);
+	#ifdef DEBUG
+	printf("gpio read: %s\n",ch);
+	#endif
+	if(ch[0] == '0') return 0;
+	return 1;
 }
 
 

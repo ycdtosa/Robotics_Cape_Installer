@@ -60,7 +60,8 @@ void on_pause_press(){
 	// now keep checking to see if the button is still held down
 	for(i=0;i<samples;i++){
 		rc_usleep(QUIT_CHECK_US);
-		if(rc_get_pause_button() == RELEASED){
+		//if(rc_get_pause_button() == RELEASED){
+		if(rc_button_get_state(PAUSE) == RELEASED){
 			printf("shutdown check sees released\n");
 			return;
 		}
@@ -97,9 +98,15 @@ int main(){
 		return -1;
 	}
 
+
+	if(rc_button_get_state(MODE) == RELEASED){
+			printf("released BEGINNING\n");
+		}
+		else printf("pressed BEGINNING\n");
+
 	// start button handler threads
-	if(rc_init_buttons()){
-		fprintf(stderr,"ERROR: failed to run rc_initialize(), are you root?\n");
+	if(rc_button_init()){
+		fprintf(stderr,"ERROR: failed to run rc_init_buttons(), are you root?\n");
 		return -1;
 	}
 
@@ -107,9 +114,9 @@ int main(){
 	printf("hold pause button to exit\n");
 
 	//Assign your own functions to be called when events occur
-	if(rc_set_button_callback(PAUSE,PRESSED,&on_pause_press)) return -1;
-	if(rc_set_button_callback(PAUSE,RELEASED,&on_pause_release)) return -1;
-	if(rc_set_button_callback(MODE,RELEASED,&on_mode_release)) return -1;
+	if(rc_button_set_callback(PAUSE,PRESSED,&on_pause_press)) return -1;
+	if(rc_button_set_callback(PAUSE,RELEASED,&on_pause_release)) return -1;
+	if(rc_button_set_callback(MODE,RELEASED,&on_mode_release)) return -1;
 
 	// start in slow mode with both LEDs off
 	mode = 0;
@@ -133,6 +140,10 @@ int main(){
 				toggle=1;
 			}
 		}
+		if(rc_button_get_state(MODE) == RELEASED){
+			printf("released\n");
+		}
+		else printf("pressed\n");
 		// sleep the right delay based on current mode.
 		rc_usleep(us_delay[mode]);
 	}
@@ -140,6 +151,6 @@ int main(){
 	// now that the while loop has exited, clean up neatly and exit compeltely.
 	rc_led_set(GREEN,OFF);
 	rc_led_set(RED,OFF);
-	rc_cleanup_buttons();
+	rc_button_cleanup();
 	return 0;
 }

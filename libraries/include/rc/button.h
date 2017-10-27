@@ -81,13 +81,13 @@ typedef enum rc_button_t {
 } rc_button_t;
 
 // initialize and cleanup
-int rc_init_buttons();
-int rc_cleanup_buttons();
+int rc_button_init();
+int rc_button_cleanup();
 
 // general functions
-int rc_set_button_callback(rc_button_t button, rc_button_state_t state,void (*func)(void));
-rc_button_state_t rc_get_button_state(rc_button_t button);
-int rc_wait_for_button(rc_button_t button, rc_button_state_t state);
+int rc_button_set_callback(rc_button_t button, rc_button_state_t state,void (*func)(void));
+rc_button_state_t rc_button_get_state(rc_button_t button);
+int rc_button_wait(rc_button_t button, rc_button_state_t state);
 
 
 

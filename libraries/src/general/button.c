@@ -48,6 +48,10 @@ static const thread_mode_t mode[] = {
 	{MODE,  RELEASED, MODE_BTN,  3}
 };
 
+// local states set by the button threads
+static rc_button_state_t current_pause_state;
+static rc_button_state_t current_mode_state;
+
 /*******************************************************************************
 * @ void rc_null_func()
 *
@@ -59,12 +63,12 @@ static void rc_null_func(){
 }
 
 /*******************************************************************************
-* int rc_init_buttons()
+* int rc_button_init()
 *
 * start 4 threads to handle 4 interrupt routines for pressing and
 * releasing the two buttons.
 *******************************************************************************/
-int rc_init_buttons()
+int rc_button_init()
 {
 	int i;
 	// sanity checks
@@ -93,6 +97,14 @@ int rc_init_buttons()
 		fprintf(stderr,"ERROR: Failed to set gpio pin %d as output\n", MODE_BTN);
 		return -1;
 	}
+
+	// read in current values first
+	if(rc_gpio_get_value(PAUSE_BTN)) current_pause_state=RELEASED;
+	else current_pause_state=PRESSED;
+	if(rc_gpio_get_value(MODE_BTN)) current_mode_state=RELEASED;
+	else current_mode_state=PRESSED;
+
+	// now set up edge detection
 	rc_gpio_set_edge(MODE_BTN, EDGE_BOTH);
 	rc_gpio_set_edge(PAUSE_BTN, EDGE_BOTH);
 
@@ -187,6 +199,10 @@ void* button_handler(void* ptr)
 		// for go back to poll
 		if(new_state!=mode->state) continue;
 
+		// set new button state
+		if(mode->button==PAUSE) current_pause_state=mode->state;
+		else current_mode_state=mode->state;
+
 		// broadcast condition for blocking wait to return
 		pthread_mutex_lock(&mutex[mode->index]);
 		pthread_cond_broadcast(&condition[mode->index]);
@@ -199,11 +215,11 @@ void* button_handler(void* ptr)
 }
 
 /*******************************************************************************
-* int rc_set_button_callback(rc_button_t button, rc_button_state_t state,void (*func)(void))
+* int rc_button_set_callback(rc_button_t button, rc_button_state_t state,void (*func)(void))
 *
 *
 *******************************************************************************/
-int rc_set_button_callback(rc_button_t button, rc_button_state_t state,void (*func)(void))
+int rc_button_set_callback(rc_button_t button, rc_button_state_t state,void (*func)(void))
 {
 	if(!initialized_flag){
 		fprintf(stderr,"ERROR: call to rc_set_button_callback when buttons have not been initialized.\n");
@@ -220,9 +236,9 @@ int rc_set_button_callback(rc_button_t button, rc_button_state_t state,void (*fu
 }
 
 /*******************************************************************************
-* rc_button_state_t rc_get_button_state(rc_button_t button)
+* rc_button_state_t rc_button_get_state(rc_button_t button)
 *******************************************************************************/
-rc_button_state_t rc_get_button_state(rc_button_t button)
+rc_button_state_t rc_button_get_state(rc_button_t button)
 {
 	if(!initialized_flag){
 		fprintf(stderr,"ERROR: call to rc_get_button_state() when buttons have not been initialized.\n");
@@ -230,11 +246,13 @@ rc_button_state_t rc_get_button_state(rc_button_t button)
 	}
 	switch(button){
 	case PAUSE:
-		if(rc_gpio_get_value(PAUSE_BTN)==HIGH) return RELEASED;
-		else return PRESSED;
+		//if(rc_gpio_get_value(PAUSE_BTN)==0) return PRESSED;
+		//else return RELEASED;
+		return current_pause_state;
 	case MODE:
-		if(rc_gpio_get_value(MODE_BTN)==HIGH) return RELEASED;
-		else return PRESSED;
+		//if(rc_gpio_get_value(MODE_BTN)==0) return PRESSED;
+		//else return RELEASED;
+		return current_mode_state;
 	default:
 		fprintf(stderr,"ERROR: in rc_get_button_state, invalid button enum\n");
 		return RELEASED;
@@ -244,7 +262,7 @@ rc_button_state_t rc_get_button_state(rc_button_t button)
 /*******************************************************************************
 * waiting functions
 *******************************************************************************/
-int rc_wait_for_button(rc_button_t button, rc_button_state_t state)
+int rc_button_wait(rc_button_t button, rc_button_state_t state)
 {
 	if(shutdown_flag!=0){
 		fprintf(stderr,"ERROR: call to rc_wait_for_button() after buttons have been powered off.\n");
@@ -288,9 +306,9 @@ int get_index(rc_button_t button, rc_button_state_t state){
 
 
 /*******************************************************************************
-* int rc_cleanup_buttons()
+* int rc_button_cleanup()
 *******************************************************************************/
-int rc_cleanup_buttons()
+int rc_button_cleanup()
 {
 	// if buttons not initialized, just return, nothing to do
 	if(!initialized_flag) return 0;
