@@ -76,8 +76,8 @@ typedef enum rc_button_state_t {
 
 // button enumerated type
 typedef enum rc_button_t {
-	PAUSE,
-	MODE
+	RC_PAUSE_BTN,
+	RC_MODE_BTN
 } rc_button_t;
 
 // initialize and cleanup

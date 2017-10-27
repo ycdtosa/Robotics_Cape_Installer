@@ -141,7 +141,9 @@ int rc_gpio_get_value(int pin)
 	printf("gpio read: %s\n",ch);
 	#endif
 	if(ch[0] == '0') return 0;
-	return 1;
+	else if(ch[0] == '1') return 1;
+	fprintf(stderr, "ERROR: gpio value returned: %s\n", ch);
+	return -1;
 }
 
 

@@ -13,8 +13,8 @@
 
 //// input pins
 // gpio # for gpio_a.b = (32*a)+b
-#define PAUSE_BTN		69	//gpio2.5 P8.9
-#define MODE_BTN		68	//gpio2.4 P8.10
+#define PAUSE_BTN_PIN		69	//gpio2.5 P8.9
+#define MODE_BTN_PIN		68	//gpio2.4 P8.10
 #define IMU_INTERRUPT_PIN	117	//gpio3.21 P9.25
 
 //// gpio output pins

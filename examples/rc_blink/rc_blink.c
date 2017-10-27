@@ -61,7 +61,7 @@ void on_pause_press(){
 	for(i=0;i<samples;i++){
 		rc_usleep(QUIT_CHECK_US);
 		//if(rc_get_pause_button() == RELEASED){
-		if(rc_button_get_state(PAUSE) == RELEASED){
+		if(rc_button_get_state(RC_PAUSE_BTN) == RELEASED){
 			printf("shutdown check sees released\n");
 			return;
 		}
@@ -91,6 +91,7 @@ void on_mode_release(){
 * control the blink speed and program state
 *******************************************************************************/
 int main(){
+	rc_button_state_t ret;
 
 	// start signal handler so we can exit cleanly
 	if(rc_enable_signal_handler()<0){
@@ -98,11 +99,10 @@ int main(){
 		return -1;
 	}
 
-
-	if(rc_button_get_state(MODE) == RELEASED){
-			printf("released BEGINNING\n");
-		}
-		else printf("pressed BEGINNING\n");
+	ret = rc_button_get_state(RC_MODE_BTN);
+	if((int)ret==-1) return -1;
+	else if(ret == RELEASED) printf("released BEGINNING\n");
+	else printf("pressed BEGINNING\n");
 
 	// start button handler threads
 	if(rc_button_init()){
@@ -114,9 +114,9 @@ int main(){
 	printf("hold pause button to exit\n");
 
 	//Assign your own functions to be called when events occur
-	if(rc_button_set_callback(PAUSE,PRESSED,&on_pause_press)) return -1;
-	if(rc_button_set_callback(PAUSE,RELEASED,&on_pause_release)) return -1;
-	if(rc_button_set_callback(MODE,RELEASED,&on_mode_release)) return -1;
+	if(rc_button_set_callback(RC_PAUSE_BTN,PRESSED,&on_pause_press)) return -1;
+	if(rc_button_set_callback(RC_PAUSE_BTN,RELEASED,&on_pause_release)) return -1;
+	if(rc_button_set_callback(RC_MODE_BTN,RELEASED,&on_mode_release)) return -1;
 
 	// start in slow mode with both LEDs off
 	mode = 0;
@@ -140,7 +140,7 @@ int main(){
 				toggle=1;
 			}
 		}
-		if(rc_button_get_state(MODE) == RELEASED){
+		if(rc_button_get_state(RC_MODE_BTN) == RELEASED){
 			printf("released\n");
 		}
 		else printf("pressed\n");
