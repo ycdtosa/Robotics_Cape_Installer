@@ -70,8 +70,8 @@
 
 // state enumerated type
 typedef enum rc_button_state_t {
-	RELEASED,
-	PRESSED
+	PRESSED,
+	RELEASED
 } rc_button_state_t;
 
 // button enumerated type
@@ -93,13 +93,13 @@ int rc_wait_for_button(rc_button_t button, rc_button_state_t state);
 
 // deprecated callback function initializers
 __deprecated int rc_set_pause_pressed_func(void (*func)(void));
-int rc_set_pause_released_func(void (*func)(void));
-int rc_set_mode_pressed_func(void (*func)(void));
-int rc_set_mode_released_func(void (*func)(void));
+__deprecated int rc_set_pause_released_func(void (*func)(void));
+__deprecated int rc_set_mode_pressed_func(void (*func)(void));
+__deprecated int rc_set_mode_released_func(void (*func)(void));
 
 // deprecated state functions
-rc_button_state_t rc_get_pause_button();
-rc_button_state_t rc_get_mode_button();
+__deprecated rc_button_state_t rc_get_pause_button();
+__deprecated rc_button_state_t rc_get_mode_button();
 
 
 

@@ -56,7 +56,6 @@ static int init_led(rc_led_t led)
 	strcpy(buf, SYSFS_LED_DIR);
 	strcat(buf,paths[(int)led]);
 	strcat(buf,BRIGHTNESS_FILE);
-	printf("%s\n",buf);
 	temp_fd = open(buf, O_RDWR);
 	if(temp_fd<0){
 		fprintf(stderr,"ERROR: in rc_init_led, failed to open LED file handle\n");

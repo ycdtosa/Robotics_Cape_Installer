@@ -20,6 +20,7 @@
 #include "rc/time.h"
 
 #define QUIT_TIMEOUT_US 1500000 // quit after 1.5 seconds holding pause button
+#define QUIT_CHECK_US	100000	// check every 1/10 second
 
 // mode=0,1,2 corresponds to us_delay index for slow,medium,fast
 const int us_delay[] = {400000, 170000, 100000};
@@ -34,8 +35,15 @@ int toggle; // toggles between 0&1 for led blink
 *******************************************************************************/
 void on_pause_release(){
 	// toggle betewen paused and running modes
-	if(rc_get_state()==RUNNING)	rc_set_state(PAUSED);
-	else if(rc_get_state()==PAUSED)	rc_set_state(RUNNING);
+	if(rc_get_state()==RUNNING){
+		rc_set_state(PAUSED);
+		printf("PAUSED\n");
+	}
+	else if(rc_get_state()==PAUSED){
+		rc_set_state(RUNNING);
+		printf("RUNNING\n");
+	}
+	fflush(stdout);
 	return;
 }
 
@@ -47,13 +55,15 @@ void on_pause_release(){
 *******************************************************************************/
 void on_pause_press(){
 	int i=0;
-	const int samples = 100;	// check for release 100 times in this period
-	const int us_wait = 2000000; // 2 seconds
+	const int samples = QUIT_TIMEOUT_US/QUIT_CHECK_US;
 
 	// now keep checking to see if the button is still held down
 	for(i=0;i<samples;i++){
-		rc_usleep(us_wait/samples);
-		if(rc_get_pause_button() == RELEASED) return;
+		rc_usleep(QUIT_CHECK_US);
+		if(rc_get_pause_button() == RELEASED){
+			printf("shutdown check sees released\n");
+			return;
+		}
 	}
 	printf("long press detected, shutting down\n");
 	rc_set_state(EXITING);
@@ -97,9 +107,9 @@ int main(){
 	printf("hold pause button to exit\n");
 
 	//Assign your own functions to be called when events occur
-	if(rc_set_pause_pressed_func(&on_pause_press)) return -1;
-	if(rc_set_pause_released_func(&on_pause_release)) return -1;
-	if(rc_set_mode_released_func(&on_mode_release)) return -1;
+	if(rc_set_button_callback(PAUSE,PRESSED,&on_pause_press)) return -1;
+	if(rc_set_button_callback(PAUSE,RELEASED,&on_pause_release)) return -1;
+	if(rc_set_button_callback(MODE,RELEASED,&on_mode_release)) return -1;
 
 	// start in slow mode with both LEDs off
 	mode = 0;
@@ -128,6 +138,8 @@ int main(){
 	}
 
 	// now that the while loop has exited, clean up neatly and exit compeltely.
+	rc_led_set(GREEN,OFF);
+	rc_led_set(RED,OFF);
 	rc_cleanup_buttons();
 	return 0;
 }

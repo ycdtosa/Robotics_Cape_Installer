@@ -17,16 +17,15 @@
 #include "rc/time.h"
 #include "rc/rc_defs.h"
 
-#define POLL_BUF_LEN	1024
-#define POLL_TIMEOUT	100 // 0.1 seconds
-#define NUM_THREADS	4
-#define DEBOUNCE_CHECKS	3 // must be >=1
+#define POLL_TIMEOUT		100	// 0.1 seconds
+#define NUM_THREADS		4	// 2 for each button
+#define DEBOUNCE_INTERVAL_US	2000	// 2ms
 // local function declarations
 static int get_index(rc_button_t button, rc_button_state_t state);
 static void* button_handler(void* ptr);
 static void rc_null_func();
 
-// local variables
+// local variables, arrays follow indexing of mode[] below
 static void (*callbacks[4])(void);
 static pthread_t threads[4];
 static pthread_mutex_t mutex[4];
@@ -99,7 +98,7 @@ int rc_init_buttons()
 
 	// wipe the callback functions
 	#ifdef DEBUG
-	printf("setting defualt callback function\n");
+	printf("setting default callback function\n");
 	#endif
 	for(i=0;i<4;i++){
 		callbacks[i]=&rc_null_func;
@@ -113,6 +112,9 @@ int rc_init_buttons()
 		pthread_mutex_init(&mutex[i],NULL);
 		pthread_cond_init(&condition[i],NULL);
 	}
+
+	// make sure shutdown flag is turned off
+	shutdown_flag=0;
 
 	// spawn off threads
 	#ifdef DEBUG
@@ -145,10 +147,10 @@ int rc_init_buttons()
 void* button_handler(void* ptr)
 {
 	thread_mode_t* mode = (thread_mode_t*)ptr;
-	int i;
 	struct pollfd fdset;
-	char buf[POLL_BUF_LEN];
+	char ch;
 	int gpio_fd = rc_gpio_fd_open(mode->gpio);
+	rc_button_state_t new_state;
 	if(gpio_fd == -1){
 		fprintf(stderr,"ERROR initializing buttons, failed to get GPIO fd for pin %d\n",mode->gpio);
 		return NULL;
@@ -157,34 +159,63 @@ void* button_handler(void* ptr)
 	fdset.events = POLLPRI; // high-priority interrupt
 	// keep running until the program closes
 	while(shutdown_flag==0) {
+		// purge any interrupts that may have stacked up
+		lseek(fdset.fd, 0, SEEK_SET);
+		read(fdset.fd, &ch, 1);
+		// debounce wait
+		rc_usleep(DEBOUNCE_INTERVAL_US);
+		// purge any interrupts that may have stacked up
+		lseek(fdset.fd, 0, SEEK_SET);
+		read(fdset.fd, &ch, 1);
 		// system waits here until FIFO interrupt
 		poll(&fdset, 1, POLL_TIMEOUT);
-		if(fdset.revents & POLLPRI){
-			lseek(fdset.fd, 0, SEEK_SET);
-			read(fdset.fd, buf, POLL_BUF_LEN);
-			#ifdef DEBUG
-			printf("gpiofd reads: %s\n",buf);
-			#endif
-			// debounce checks
-			for(i=0;i<DEBOUNCE_CHECKS;i++){
-				rc_usleep(500);
-				if(rc_get_button_state(mode->button)!=mode->state){
-					goto PURGE;
-				}
-			}
-			// broadcast condition for blocking wait to return
-			pthread_mutex_lock(&mutex[mode->index]);
-			pthread_cond_broadcast(&condition[mode->index]);
-			pthread_mutex_unlock(&mutex[mode->index]);
-			// execute the callback
-			callbacks[mode->index]();
-PURGE:
-			// purge any interrupts that may have stacked up
-			lseek(fdset.fd, 0, SEEK_SET);
-			read(fdset.fd, buf, POLL_BUF_LEN);
-		}
+		// if poll returned for something other than POLLPRI, ignore
+		if(!(fdset.revents&POLLPRI)) continue;
+		// read in buffer from gpio, only 1 character
+		lseek(fdset.fd, 0, SEEK_SET);
+		read(fdset.fd, &ch, 1);
+
+		#ifdef DEBUG
+		printf("button thread: %d  gpiofd reads: %c\n",mode->index,ch);
+		#endif
+
+		// see what the new gpio state is
+		if(ch=='0')	new_state=PRESSED;
+		else		new_state=RELEASED;
+
+		// if the new state isn't what this thread is looking
+		// for go back to poll
+		if(new_state!=mode->state) continue;
+
+		// broadcast condition for blocking wait to return
+		pthread_mutex_lock(&mutex[mode->index]);
+		pthread_cond_broadcast(&condition[mode->index]);
+		pthread_mutex_unlock(&mutex[mode->index]);
+		// execute the callback
+		callbacks[mode->index]();
 	}
 	rc_gpio_fd_close(gpio_fd);
+	return 0;
+}
+
+/*******************************************************************************
+* int rc_set_button_callback(rc_button_t button, rc_button_state_t state,void (*func)(void))
+*
+*
+*******************************************************************************/
+int rc_set_button_callback(rc_button_t button, rc_button_state_t state,void (*func)(void))
+{
+	if(!initialized_flag){
+		fprintf(stderr,"ERROR: call to rc_set_button_callback when buttons have not been initialized.\n");
+		return -2;
+	}
+	int index = get_index(button,state);
+	if(index<0) return -1;
+	if(func==NULL){
+		printf("ERROR: trying to assign NULL pointer to button callback\n");
+		return -1;
+	}
+	callbacks[index] = func;
 	return 0;
 }
 
@@ -199,10 +230,10 @@ rc_button_state_t rc_get_button_state(rc_button_t button)
 	}
 	switch(button){
 	case PAUSE:
-		if(rc_gpio_get_value_mmap(PAUSE_BTN)==HIGH) return RELEASED;
+		if(rc_gpio_get_value(PAUSE_BTN)==HIGH) return RELEASED;
 		else return PRESSED;
 	case MODE:
-		if(rc_gpio_get_value_mmap(MODE_BTN)==HIGH) return RELEASED;
+		if(rc_gpio_get_value(MODE_BTN)==HIGH) return RELEASED;
 		else return PRESSED;
 	default:
 		fprintf(stderr,"ERROR: in rc_get_button_state, invalid button enum\n");
@@ -263,6 +294,7 @@ int rc_cleanup_buttons()
 {
 	// if buttons not initialized, just return, nothing to do
 	if(!initialized_flag) return 0;
+	shutdown_flag = 1;
 	int ret = 0;
 	//allow up to 3 seconds for thread cleanup
 	struct timespec thread_timeout;
@@ -329,10 +361,10 @@ rc_button_state_t rc_get_pause_button()
 		fprintf(stderr,"ERROR: call to rc_get_pause_button() when buttons have not been initialized.\n");
 		return -2;
 	}
-	if(rc_gpio_get_value_mmap(PAUSE_BTN)==HIGH){
-		return RELEASED;
+	if(rc_gpio_get_value(PAUSE_BTN)==0){
+		return PRESSED;
 	}
-	return PRESSED;
+	return RELEASED;
 }
 
 /*******************************************************************************
@@ -345,7 +377,7 @@ rc_button_state_t rc_get_mode_button()
 		fprintf(stderr,"ERROR: call to rc_get_mode_button() when buttons have not been initialized.\n");
 		return -2;
 	}
-	if(rc_gpio_get_value_mmap(MODE_BTN)==HIGH){
+	if(rc_gpio_get_value(MODE_BTN)==HIGH){
 		return RELEASED;
 	}
 	return PRESSED;

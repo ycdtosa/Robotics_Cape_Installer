@@ -20,22 +20,56 @@
 
 #define SYSFS_GPIO_DIR "/sys/class/gpio"
 #define MAX_BUF 64
+#define NUM_PINS 128
 
+// normal file handle variables
+static int value_fd[NUM_PINS];
 
+// mmap variables
 static volatile uint32_t *map; // pointer to /dev/mem
 static int mmap_initialized_flag = 0; // boolean to check if mem mapped
 
+// local function declaration
+static int init_pin_fd(int gpio);
+
+/*******************************************************************************
+* static int init_pin_fd(int gpio)
+*
+*
+*******************************************************************************/
+static int init_pin_fd(int gpio)
+{
+	if(gpio<0 || gpio>=NUM_PINS){
+		fprintf(stderr,"ERROR: in rc_gpio set/get value, gpio pin must be between 0 & 128\n");
+		return -1;
+	}
+	if(value_fd[gpio]) return 0;
+	int temp_fd;
+	char buf[MAX_BUF];
+	snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/value", gpio);
+	temp_fd = open(buf, O_RDWR);
+	if(temp_fd<0){
+		perror("ERROR: in rc_gpio get/set value");
+		return -1;
+	}
+	value_fd[gpio]=temp_fd;
+	return 0;
+}
 
 /*******************************************************************************
 * rc_gpio_export
-******************************************************************************/
-int rc_gpio_export(unsigned int gpio)
+*******************************************************************************/
+int rc_gpio_export(int gpio)
 {
 	int fd, len;
 	char buf[MAX_BUF];
+	if(gpio<0 || gpio>=NUM_PINS){
+		fprintf(stderr,"ERROR: in rc_gpio_export, gpio pin must be between 0 & 128\n");
+		return -1;
+	}
 	fd = open(SYSFS_GPIO_DIR "/export", O_WRONLY);
 	if(fd<0){
-		fprintf(stderr,"ERROR: in rc_gpio_export, failed to open gpio file handle\n");
+		perror("ERROR: in rc_gpio_export");
 		return -1;
 	}
 	len = snprintf(buf, sizeof(buf), "%d", gpio);
@@ -47,7 +81,7 @@ int rc_gpio_export(unsigned int gpio)
 /*******************************************************************************
 * rc_gpio_unexport
 *******************************************************************************/
-int rc_gpio_unexport(unsigned int gpio)
+int rc_gpio_unexport(int gpio)
 {
 	int fd, len;
 	char buf[MAX_BUF];
@@ -59,6 +93,8 @@ int rc_gpio_unexport(unsigned int gpio)
 	len = snprintf(buf, sizeof(buf), "%d", gpio);
 	write(fd, buf, len);
 	close(fd);
+	close(value_fd[gpio]);
+	value_fd[gpio]=0;
 	return 0;
 }
 
@@ -85,53 +121,35 @@ int rc_gpio_set_dir(int gpio, rc_pin_direction_t out_flag)
 /*******************************************************************************
 * rc_gpio_set_value
 *******************************************************************************/
-int rc_gpio_set_value(unsigned int gpio, int value)
+int rc_gpio_set_value(int gpio, int value)
 {
-	int fd;
-	char buf[MAX_BUF];
-	snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/value", gpio);
-	fd = open(buf, O_WRONLY);
-	if(fd<0){
-		fprintf(stderr,"ERROR: in rc_gpio_set_value, failed to open gpio file handle\n");
-		return -1;
-	}
-	if(value)	write(fd, "1", 2);
-	else		write(fd, "0", 2);
-	close(fd);
+	if(init_pin_fd(gpio)) return -1;
+	if(value)	write(value_fd[gpio], "1", 2);
+	else		write(value_fd[gpio], "0", 2);
 	return 0;
 }
 
 /*******************************************************************************
 * rc_gpio_get_value
 *******************************************************************************/
-int rc_gpio_get_value(unsigned int gpio)
+int rc_gpio_get_value(int pin)
 {
-	int fd, ret;
-	char buf[MAX_BUF];
 	char ch;
-	snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/value", gpio);
-	fd = open(buf, O_RDONLY);
-	// make sure file descriptor opened correctly
-	if (fd < 0) {
-		fprintf(stderr,"ERROR: in rc_gpio_get_value failed to open gpio file handle\n");
-		return fd;
-	}
-	read(fd, &ch, 1);
-	if (ch != '0') ret = 1;
-	else ret = 0;
-	close(fd);
-	return ret;
+	if(init_pin_fd(pin)) return -1;
+	read(value_fd[pin], &ch, 1);
+	if (ch != '0') return 1;
+	return 0;
 }
 
 
 /*******************************************************************************
 * rc_gpio_set_edge
 *******************************************************************************/
-int rc_gpio_set_edge(unsigned int gpio, rc_pin_edge_t edge)
+int rc_gpio_set_edge(int pin, rc_pin_edge_t edge)
 {
 	int fd, ret, bytes;
 	char buf[MAX_BUF];
-	snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/edge", gpio);
+	snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/edge", pin);
 	fd = open(buf, O_WRONLY);
 	if (fd < 0) {
 		fprintf(stderr,"ERROR: in rc_gpio_set_edge, failed to open gpio file handle\n");
@@ -171,11 +189,11 @@ int rc_gpio_set_edge(unsigned int gpio, rc_pin_edge_t edge)
 /*******************************************************************************
 * rc_gpio_fd_open
 *******************************************************************************/
-int rc_gpio_fd_open(unsigned int gpio)
+int rc_gpio_fd_open(int pin)
 {
 	int fd;
 	char buf[MAX_BUF];
-	snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/value", gpio);
+	snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/value", pin);
 	fd = open(buf, O_RDONLY | O_NONBLOCK );
 	if (fd < 0) {
 		fprintf(stderr,"ERROR: in rc_gpio_fd_open, failed to open gpio file handle\n");

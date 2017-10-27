@@ -19,13 +19,13 @@ typedef enum rc_pin_edge_t{
 	EDGE_BOTH
 }rc_pin_edge_t;
 
-int rc_gpio_export(unsigned int gpio);
-int rc_gpio_unexport(unsigned int gpio);
-int rc_gpio_set_dir(int gpio, rc_pin_direction_t dir);
-int rc_gpio_set_value(unsigned int gpio, int value);
-int rc_gpio_get_value(unsigned int gpio);
-int rc_gpio_set_edge(unsigned int gpio, rc_pin_edge_t edge);
-int rc_gpio_fd_open(unsigned int gpio);
+int rc_gpio_export(int pin);
+int rc_gpio_unexport(int pin);
+int rc_gpio_set_dir(int pin, rc_pin_direction_t dir);
+int rc_gpio_set_value(int pin, int value);
+int rc_gpio_get_value(int pin);
+int rc_gpio_set_edge(int pin, rc_pin_edge_t edge);
+int rc_gpio_fd_open(int pin);
 int rc_gpio_fd_close(int fd);
 
 int rc_gpio_init_mmap();
