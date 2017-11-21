@@ -1,6 +1,5 @@
 roboticscape-bs (0.3.4+bs) UNRELEASED; urgency=medium
 
-  [ bs@beaglebone ]
   [ycdtosa]
     * Non-maintainer upload.
     * Make library conflict with the original roboticscape
