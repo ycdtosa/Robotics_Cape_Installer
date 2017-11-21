@@ -1,3 +1,12 @@
+roboticscape-bs (0.3.4+bs) UNRELEASED; urgency=medium
+
+  [ bs@beaglebone ]
+  [ycdtosa]
+    * Non-maintainer upload.
+    * Make library conflict with the original roboticscape
+
+ --  <bs@beaglebone>  Tue, 21 Nov 2017 11:21:47 +0100
+
 roboticscape (0.3.4) unstable; urgency=low
 
     * add setuid on example install so 'sudo' is not needed
